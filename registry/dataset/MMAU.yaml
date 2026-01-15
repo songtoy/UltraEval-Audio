@@ -5,3 +5,4 @@ mmau-test-mini:
     name: TwinkStart/MMAU
     split: test_mini
     ref_col: answer
+    local_path: /root/zhoust/Impros/bench/MMAU/data

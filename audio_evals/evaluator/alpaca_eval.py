@@ -28,7 +28,7 @@ class AlpacaEvaluator(Evaluator):
 
         # with open("/Users/a1/project/alpaca_eval-main/src/alpaca_eval/evaluators_configs/alpaca_eval_cot_gpt4_turbo_fn/configs.yaml", "r", encoding="utf-8") as f:
         #     d = yaml.safe_load(f.read())
-        res = model.inference(p, temperature=0, maxTokens=100)
+        res = model.inference(p, temperature=0, max_tokens=100)
 
         # res_d = re.search(r"```json(.*?)```", res, re.DOTALL)
         # if res_d:
@@ -64,7 +64,7 @@ class ChatbotEvaluator(Evaluator):
         prompt = registry.get_prompt("chatbot-eval")
 
         p = prompt.load(instruction=kwargs["instruction"], response=pred)
-        res = model.inference(p, temperature=0, maxTokens=2048)
+        res = model.inference(p, temperature=0, max_tokens=2048)
 
         # res_d = re.search(r"```json(.*?)```", res, re.DOTALL)
         d = re.search(r'\[\[(\d+)\]\]', res)

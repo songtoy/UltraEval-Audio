@@ -4,6 +4,7 @@ import json
 import tempfile
 import subprocess
 import logging
+import httpx
 from typing import Dict, Any, List
 from urllib.parse import urlparse
 import requests
@@ -37,7 +38,14 @@ class GPT(APIModel):
                 api_version="2025-03-01-preview", api_key=key, azure_endpoint=endpoint
             )
         else:
-            self.client = OpenAI()
+            self.client = OpenAI(
+                api_key=os.getenv("OPENAI_API_KEY"),
+                base_url=os.getenv("OPENAI_API_BASE"),
+                http_client=httpx.Client(
+                    base_url=os.getenv("OPENAI_API_BASE"),
+                    follow_redirects=True,
+                ),
+            )
 
     def _inference(self, prompt: PromptStruct, **kwargs) -> str:
 

@@ -14,5 +14,6 @@ class Speech2text(Process):
         assert os.path.exists(answer), "must be a valid audio file, but got {}".format(
             answer
         )
+        print(answer)
         real_prompt = self.prompt.load(WavPath=answer)
         return self.model.inference(real_prompt)

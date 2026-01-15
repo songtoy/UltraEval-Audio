@@ -5,3 +5,4 @@ speech-chatbot-alpaca-eval:
     name: TwinkStart/speech-chatbot-alpaca-eval
     split: test
     ref_col: output
+    local_path: /root/zhoust/Impros/bench/speech-chatbot-alpaca-eval/data

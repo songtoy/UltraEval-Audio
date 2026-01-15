@@ -5,6 +5,7 @@ meld-emo:
     split: test
     default_task: emotion_analysis
     ref_col: Emotion
+    local_path: /root/zhoust/Impros/bench/MELD/data
 
 meld-sentiment:
   class: audio_evals.dataset.huggingface.Huggingface

@@ -39,7 +39,10 @@ def load_audio_hf_dataset(name, subset=None, split="", local_path="", col_aliase
     if col_aliases is None:
         col_aliases = {}
     if local_path:
-        ds = load_from_disk(local_path)
+        try:
+            ds = load_from_disk(local_path)
+        except:
+            ds = load_dataset("parquet", data_files={split: os.path.join(local_path, f"{split}-*.parquet")}, split=split)
     else:
         load_args = {"path": name}
         if subset:
