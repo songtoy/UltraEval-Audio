@@ -19,14 +19,7 @@ from matcha.models.components.flow_matching import BASECFM
 
 
 class ConditionalCFM(BASECFM):
-    def __init__(
-        self,
-        in_channels,
-        cfm_params,
-        n_spks=1,
-        spk_emb_dim=64,
-        estimator: torch.nn.Module = None,
-    ):
+    def __init__(self, in_channels, cfm_params, n_spks=1, spk_emb_dim=64, estimator: torch.nn.Module = None):
         super().__init__(
             n_feats=in_channels,
             cfm_params=cfm_params,
@@ -69,11 +62,9 @@ class ConditionalCFM(BASECFM):
         """
         z = torch.randn_like(mu) * temperature
         t_span = torch.linspace(0, 1, n_timesteps + 1, device=mu.device)
-        if self.t_scheduler == "cosine":
+        if self.t_scheduler == 'cosine':
             t_span = 1 - torch.cos(t_span * 0.5 * torch.pi)
-        return self.solve_euler(
-            z, t_span=t_span, mu=mu, mask=mask, spks=spks, cond=cond
-        )
+        return self.solve_euler(z, t_span=t_span, mu=mu, mask=mask, spks=spks, cond=cond)
 
     def solve_euler(self, x, t_span, mu, mask, spks, cond):
         """
@@ -105,15 +96,12 @@ class ConditionalCFM(BASECFM):
         for step in range(1, len(t_span)):
             # dphi_dt = self.estimator(x, mask, mu, t, spks, cond)
             # pdb.set_trace()
-            dphi_dt = self.estimator(
-                x,  # [bs, 80, 229]
-                t[None],  # (bs,)
-                global_embed=spks,
-                input_concat_cond=mu,
-                mask=mask[0],  # [bs, 229]
-                cfg_dropout_prob=cfg_dropout_prob,
-                cfg_scale=cfg_scale,
-            )
+            dphi_dt = self.estimator(x,  # [bs, 80, 229]
+                                     t[None],  # (bs,)
+                                     global_embed=spks,
+                                     input_concat_cond=mu,
+                                     mask=mask[0],  # [bs, 229]
+                                     cfg_dropout_prob=cfg_dropout_prob, cfg_scale=cfg_scale)
 
             # Classifier-Free Guidance inference introduced in VoiceBox
             if self.inference_cfg_rate > 0:
@@ -123,19 +111,15 @@ class ConditionalCFM(BASECFM):
                 #     torch.zeros_like(spks) if spks is not None else None,
                 #     torch.zeros_like(cond)
                 # )
-                cfg_dphi_dt = self.estimator(
-                    x,  # [bs, 80, 229]
-                    t[None],  # (bs,)
-                    global_embed=torch.zeros_like(spks) if spks is not None else None,
-                    input_concat_cond=torch.zeros_like(mu),
-                    mask=mask[0],  # [bs, 229]
-                    cfg_dropout_prob=cfg_dropout_prob,
-                    cfg_scale=cfg_scale,
-                )
+                cfg_dphi_dt = self.estimator(x,  # [bs, 80, 229]
+                                             t[None],  # (bs,)
+                                             global_embed=torch.zeros_like(spks) if spks is not None else None,
+                                             input_concat_cond=torch.zeros_like(mu),
+                                             mask=mask[0],  # [bs, 229]
+                                             cfg_dropout_prob=cfg_dropout_prob, cfg_scale=cfg_scale)
 
-                dphi_dt = (
-                    1.0 + self.inference_cfg_rate
-                ) * dphi_dt - self.inference_cfg_rate * cfg_dphi_dt
+                dphi_dt = ((1.0 + self.inference_cfg_rate) * dphi_dt -
+                           self.inference_cfg_rate * cfg_dphi_dt)
             x = x + dt * dphi_dt
             t = t + dt
             sol.append(x)
@@ -166,7 +150,7 @@ class ConditionalCFM(BASECFM):
 
         # random timestep
         t = torch.rand([b, 1, 1], device=mu.device, dtype=mu.dtype)
-        if self.t_scheduler == "cosine":
+        if self.t_scheduler == 'cosine':
             t = 1 - torch.cos(t * 0.5 * torch.pi)
         # sample noise p(x_0)
         z = torch.randn_like(x1)
@@ -182,18 +166,14 @@ class ConditionalCFM(BASECFM):
             cond = cond * cfg_mask.view(-1, 1, 1)
 
         # pred = self.estimator(y, mask, mu, t.squeeze(), spks, cond)
-        pred = self.estimator(
-            y,  # [bs, 80, 229]
-            t.squeeze(1, 2),  # (bs,)
-            global_embed=spks,
-            input_concat_cond=mu,
-            mask=mask.squeeze(1),  # [bs, 229]
-            cfg_dropout_prob=0.1,
-        )
+        pred = self.estimator(y,  # [bs, 80, 229]
+                              t.squeeze(1, 2),  # (bs,)
+                              global_embed=spks,
+                              input_concat_cond=mu,
+                              mask=mask.squeeze(1),  # [bs, 229]
+                              cfg_dropout_prob=0.1)
 
-        loss = F.mse_loss(pred * mask, u * mask, reduction="sum") / (
-            torch.sum(mask) * u.shape[1]
-        )
+        loss = F.mse_loss(pred * mask, u * mask, reduction="sum") / (torch.sum(mask) * u.shape[1])
         return loss, y
 
     # def estimator_trans(self):

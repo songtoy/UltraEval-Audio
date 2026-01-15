@@ -9,31 +9,33 @@ from transformers import AutoModelForCausalLM
 from kimia_infer.models.detokenizer import get_audio_detokenizer
 from .prompt_manager import KimiAPromptManager
 from kimia_infer.utils.sampler import KimiASampler
-
+from huggingface_hub import snapshot_download
 
 class KimiAudio(object):
     def __init__(self, model_path: str, load_detokenizer: bool = True):
         logger.info(f"Loading kimi-audio main model")
-        self.alm = AutoModelForCausalLM.from_pretrained(
-            model_path, torch_dtype=torch.bfloat16, trust_remote_code=True
-        )
-        self.alm = self.alm.to(torch.cuda.current_device())
-
-        model_config = self.alm.config
-        self.kimia_token_offset = model_config.kimia_token_offset
-
-        self.prompt_manager = KimiAPromptManager(
-            model_path=model_path, kimia_token_offset=self.kimia_token_offset
-        )
 
         if os.path.exists(model_path):
             # local path
             cache_path = model_path
         else:
-            # model_id
-            cache_path = cached_assets_path(
-                library_name="transformers", namespace=model_path
-            )
+            # cache everything if model_path is a model-id
+            cache_path = snapshot_download(model_path)
+    
+        logger.info(f"Looking for resources in {cache_path}")
+        logger.info(f"Loading whisper model")
+        self.alm = AutoModelForCausalLM.from_pretrained(
+            cache_path, torch_dtype=torch.bfloat16, trust_remote_code=True
+        )
+        self.alm = self.alm.to(torch.cuda.current_device())
+
+        model_config = self.alm.config
+        self.kimia_text_audiodelaytokens = model_config.kimia_mimo_audiodelaytokens
+        self.kimia_token_offset = model_config.kimia_token_offset
+
+        self.prompt_manager = KimiAPromptManager(
+            model_path=cache_path, kimia_token_offset=self.kimia_token_offset, kimia_text_audiodelaytokens=self.kimia_text_audiodelaytokens
+        )
 
         if load_detokenizer:
             logger.info(f"Loading detokenizer")
@@ -44,9 +46,9 @@ class KimiAudio(object):
             self.detokenizer = None
 
         self.extra_tokens = self.prompt_manager.extra_tokens
-        self.kimia_text_audiodelaytokens = 6
         self.eod_ids = [self.extra_tokens.msg_end, self.extra_tokens.media_end]
 
+    @torch.inference_mode()
     def _generate_loop(
         self,
         audio_input_ids: torch.Tensor,  # input audio tokens
@@ -204,6 +206,7 @@ class KimiAudio(object):
         )
         return return_audio_tokens, return_text_tokens
 
+    @torch.inference_mode()
     def generate(
         self,
         chats: list[dict],
@@ -226,7 +229,7 @@ class KimiAudio(object):
 
         history = self.prompt_manager.get_prompt(chats, output_type=output_type)
 
-        audio_input_ids, text_input_ids, is_continuous_mask = history.to_tensor()
+        audio_input_ids, text_input_ids, is_continuous_mask, _, _ = history.to_tensor()
         audio_features = history.continuous_feature
 
         generated_wav_tokens = []

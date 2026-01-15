@@ -6,8 +6,8 @@ import tarfile
 import torch
 import torchaudio
 import safetensors
-from .configuration_whisper import WhisperVQConfig
-from .modeling_whisper import WhisperVQEncoder, WhisperVQForConditionalGeneration
+from .glm4.speech_tokenizer.configuration_whisper import WhisperVQConfig
+from .glm4.speech_tokenizer.modeling_whisper import WhisperVQEncoder, WhisperVQForConditionalGeneration
 from transformers import WhisperFeatureExtractor, WhisperTokenizerFast
 
 
@@ -38,6 +38,7 @@ _resample_buffer: dict[int, torchaudio.transforms.Resample] = {}
 
 
 def extract_speech_token(model: WhisperVQEncoder, feature_extractor: WhisperFeatureExtractor, utts):
+    dtype = model.conv1.weight.dtype
     with torch.no_grad():
         audios, indices = [], []
         for idx, utt in enumerate(utts):
@@ -45,13 +46,13 @@ def extract_speech_token(model: WhisperVQEncoder, feature_extractor: WhisperFeat
                 audio, sample_rate = utt
             else:
                 audio, sample_rate = torchaudio.load(utt)
-            audio = audio.cuda()
+            audio = audio.to(torch.cuda.current_device())
             if sample_rate != 16000:
                 if sample_rate not in _resample_buffer:
                     _resample_buffer[sample_rate] = torchaudio.transforms.Resample(
                         orig_freq=sample_rate,
                         new_freq=16000
-                    ).to('cuda')
+                    ).to(torch.cuda.current_device())
                 audio = _resample_buffer[sample_rate](audio)
             # if audio.shape[0] > 1:
             #     audio = audio[:1]
@@ -69,9 +70,11 @@ def extract_speech_token(model: WhisperVQEncoder, feature_extractor: WhisperFeat
         batch_size = 128
         for start in range(0, len(audios), batch_size):
             features = feature_extractor(audios[start: start + batch_size], sampling_rate=16000,
-                                         return_attention_mask=True, return_tensors="pt", device='cuda',
+                                         return_attention_mask=True, return_tensors="pt", device=torch.cuda.current_device(),
                                          padding="longest", pad_to_multiple_of=stride)
-            features = features.to(device="cuda")
+            features["input_features"] = features["input_features"].to(torch.cuda.current_device()).to(dtype)
+            features["attention_mask"] = features["attention_mask"].to(torch.cuda.current_device())
+            # import ipdb; ipdb.set_trace()
             outputs = model(**features)
             speech_tokens = outputs.quantized_token_ids
             attention_mask = features.attention_mask[:, ::model.conv1.stride[0] * model.conv2.stride[0]]

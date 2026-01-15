@@ -2,25 +2,23 @@ from transformers import WhisperConfig
 
 
 class WhisperVQConfig(WhisperConfig):
-    def __init__(
-        self,
-        pooling_kernel_size=None,
-        pooling_type="max",
-        pooling_position=0,
-        quantize_vocab_size=None,
-        quantize_position=16,
-        quantize_commit_coefficient=0.25,
-        quantize_loss_scale=1.0,
-        quantize_ema_decay=None,
-        quantize_restart_interval=None,
-        quantize_encoder_only=False,
-        quantize_causal_encoder=False,
-        quantize_causal_block_size=None,
-        skip_language_detection=False,
-        encoder_causal_attention=False,
-        encoder_causal_convolution=False,
-        **kwargs
-    ):
+    def __init__(self,
+                 pooling_kernel_size=None,
+                 pooling_type="max",
+                 pooling_position=0,
+                 quantize_vocab_size=None,
+                 quantize_position=16,
+                 quantize_commit_coefficient=0.25,
+                 quantize_loss_scale=1.0,
+                 quantize_ema_decay=None,
+                 quantize_restart_interval=None,
+                 quantize_encoder_only=False,
+                 quantize_causal_encoder=False,
+                 quantize_causal_block_size=None,
+                 skip_language_detection=False,
+                 encoder_causal_attention=False,
+                 encoder_causal_convolution=False,
+                 **kwargs):
         self.pooling_kernel_size = pooling_kernel_size
         self.pooling_type = pooling_type
         self.pooling_position = pooling_position

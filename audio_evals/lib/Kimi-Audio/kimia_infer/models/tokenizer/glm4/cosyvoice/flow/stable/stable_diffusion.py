@@ -13,9 +13,7 @@ target_length = 1536
 def pad_and_create_mask(matrix, target_length):
     T = matrix.shape[2]
     if T > target_length:
-        raise ValueError(
-            "The third dimension length %s should not exceed %s" % (T, target_length)
-        )
+        raise ValueError("The third dimension length %s should not exceed %s" % (T, target_length))
 
     padding_size = target_length - T
 
@@ -28,16 +26,8 @@ def pad_and_create_mask(matrix, target_length):
 
 
 class Stable_Diffusion(BaseModule):
-    def __init__(
-        self,
-        io_channels,
-        input_concat_dim=None,
-        embed_dim=768,
-        depth=24,
-        num_heads=24,
-        project_cond_tokens=False,
-        transformer_type="continuous_transformer",
-    ):
+    def __init__(self, io_channels, input_concat_dim=None, embed_dim=768, depth=24, num_heads=24,
+                 project_cond_tokens=False, transformer_type="continuous_transformer"):
         super(Stable_Diffusion, self).__init__()
         self.diffusion = DiffusionTransformer(
             io_channels=io_channels,
@@ -91,22 +81,20 @@ class Stable_Diffusion(BaseModule):
         targets = noise * alphas - x0 * sigmas
         mask = mask.squeeze(1)
         # mu_pad, mu_pad_mask = pad_and_create_mask(mu, target_length)
-        # output = self.diffusion(noised_inputs, t, cross_attn_cond=mu,
+        # output = self.diffusion(noised_inputs, t, cross_attn_cond=mu, 
         #                         cross_attn_cond_mask=mask, mask=mask, cfg_dropout_prob=0.1)
         # pdb.set_trace()
-        output = self.diffusion(
-            noised_inputs,  # [bs, 80, 229]
-            t,  # (bs,)
-            input_concat_cond=mu,
-            mask=mask,  # [bs, 229]
-            cfg_dropout_prob=0.1,
-        )
+        output = self.diffusion(noised_inputs,  # [bs, 80, 229]
+                                t,  # (bs,)
+                                input_concat_cond=mu,
+                                mask=mask,  # [bs, 229]
+                                cfg_dropout_prob=0.1)
 
         return self.mse_loss(output, targets, mask), output
 
     def mse_loss(self, output, targets, mask):
 
-        mse_loss = F.mse_loss(output, targets, reduction="none")
+        mse_loss = F.mse_loss(output, targets, reduction='none')
 
         if mask.ndim == 2 and mse_loss.ndim == 3:
             mask = mask.unsqueeze(1)

@@ -8,23 +8,19 @@ from model.base import BaseModule
 import pdb
 
 target_length = 1536
-
-
 def pad_and_create_mask(matrix, target_length):
-
+    
     T = matrix.shape[2]
     if T > target_length:
-        raise ValueError(
-            "The third dimension length %s should not exceed %s" % (T, target_length)
-        )
+        raise ValueError("The third dimension length %s should not exceed %s"%(T, target_length))
 
     padding_size = target_length - T
 
     padded_matrix = F.pad(matrix, (0, padding_size), "constant", 0)
-
+    
     mask = torch.ones((1, target_length))
     mask[:, T:] = 0  # Set the padding part to 0
-
+    
     return padded_matrix.to(matrix.device), mask.to(matrix.device)
 
 
@@ -32,15 +28,15 @@ class Stable_Diffusion(BaseModule):
     def __init__(self):
         super(Stable_Diffusion, self).__init__()
         self.diffusion = DiffusionTransformer(
-            io_channels=80,
-            # input_concat_dim=80,
-            embed_dim=768,
-            # cond_token_dim=target_length,
-            depth=24,
-            num_heads=24,
-            project_cond_tokens=False,
-            transformer_type="continuous_transformer",
-        )
+                          io_channels=80, 
+                          # input_concat_dim=80,
+                          embed_dim=768,
+                          # cond_token_dim=target_length,      
+                          depth=24,
+                          num_heads=24,
+                          project_cond_tokens=False,
+                          transformer_type="continuous_transformer",
+                          )
         # self.diffusion = UNet1d(
         #                   in_channels=80,
         #                   channels=256,
@@ -70,12 +66,13 @@ class Stable_Diffusion(BaseModule):
 
         return fakes
 
-    def compute_loss(self, x0, mask, mu):
 
+    def compute_loss(self, x0, mask, mu):
+        
         # pdb.set_trace()
         t = self.rng.draw(x0.shape[0])[:, 0].to(x0.device)
         alphas, sigmas = torch.cos(t * math.pi / 2), torch.sin(t * math.pi / 2)
-
+   
         alphas = alphas[:, None, None]
         sigmas = sigmas[:, None, None]
         noise = torch.randn_like(x0)
@@ -83,15 +80,16 @@ class Stable_Diffusion(BaseModule):
         targets = mu * alphas - x0 * sigmas
         mask = mask.squeeze(1)
         # mu_pad, mu_pad_mask = pad_and_create_mask(mu, target_length)
-        # output = self.diffusion(noised_inputs, t, cross_attn_cond=mu,
+        # output = self.diffusion(noised_inputs, t, cross_attn_cond=mu, 
         #                         cross_attn_cond_mask=mask, mask=mask, cfg_dropout_prob=0.1)
         output = self.diffusion(noised_inputs, t, mask=mask, cfg_dropout_prob=0.1)
 
         return self.mse_loss(output, targets, mask), output
+    
 
     def mse_loss(self, output, targets, mask):
-
-        mse_loss = F.mse_loss(output, targets, reduction="none")
+        
+        mse_loss = F.mse_loss(output, targets, reduction='none')
 
         if mask.ndim == 2 and mse_loss.ndim == 3:
             mask = mask.unsqueeze(1)

@@ -17,7 +17,6 @@ from torch.backends.cuda import sdp_kernel
 from torch.nn import functional as F
 from dac.nn.layers import Snake1d
 import pdb
-
 """
 Utils
 """
@@ -33,26 +32,21 @@ class ConditionedSequential(nn.Module):
             x = module(x, mapping)
         return x
 
-
 T = TypeVar("T")
-
 
 def default(val: Optional[T], d: Union[Callable[..., T], T]) -> T:
     if exists(val):
         return val
     return d() if isfunction(d) else d
 
-
 def exists(val: Optional[T]) -> T:
     return val is not None
 
-
 def closest_power_2(x: float) -> int:
     exponent = log2(x)
-    distance_fn = lambda z: abs(x - 2**z)  # noqa
+    distance_fn = lambda z: abs(x - 2 ** z)  # noqa
     exponent_closest = min((floor(exponent), ceil(exponent)), key=distance_fn)
     return 2 ** int(exponent_closest)
-
 
 def group_dict_by_prefix(prefix: str, d: Dict) -> Tuple[Dict, Dict]:
     return_dicts: Tuple[Dict, Dict] = ({}, {})
@@ -61,14 +55,12 @@ def group_dict_by_prefix(prefix: str, d: Dict) -> Tuple[Dict, Dict]:
         return_dicts[no_prefix][key] = d[key]
     return return_dicts
 
-
 def groupby(prefix: str, d: Dict, keep_prefix: bool = False) -> Tuple[Dict, Dict]:
     kwargs_with_prefix, kwargs = group_dict_by_prefix(prefix, d)
     if keep_prefix:
         return kwargs_with_prefix, kwargs
     kwargs_no_prefix = {k[len(prefix) :]: v for k, v in kwargs_with_prefix.items()}
     return kwargs_no_prefix, kwargs
-
 
 """
 Convolutional Blocks
@@ -78,10 +70,8 @@ import typing as tp
 # Copied from https://github.com/facebookresearch/audiocraft/blob/main/audiocraft/modules/conv.py under MIT License
 # License available in LICENSES/LICENSE_META.txt
 
-
-def get_extra_padding_for_conv1d(
-    x: torch.Tensor, kernel_size: int, stride: int, padding_total: int = 0
-) -> int:
+def get_extra_padding_for_conv1d(x: torch.Tensor, kernel_size: int, stride: int,
+                                 padding_total: int = 0) -> int:
     """See `pad_for_conv1d`."""
     length = x.shape[-1]
     n_frames = (length - kernel_size + padding_total) / stride + 1
@@ -89,9 +79,7 @@ def get_extra_padding_for_conv1d(
     return ideal_length - length
 
 
-def pad_for_conv1d(
-    x: torch.Tensor, kernel_size: int, stride: int, padding_total: int = 0
-):
+def pad_for_conv1d(x: torch.Tensor, kernel_size: int, stride: int, padding_total: int = 0):
     """Pad for a convolution to make sure that the last window is full.
     Extra padding is added at the end. This is required to ensure that we can rebuild
     an output of the same length, as otherwise, even with padding, some time steps
@@ -106,19 +94,14 @@ def pad_for_conv1d(
     return F.pad(x, (0, extra_padding))
 
 
-def pad1d(
-    x: torch.Tensor,
-    paddings: tp.Tuple[int, int],
-    mode: str = "constant",
-    value: float = 0.0,
-):
+def pad1d(x: torch.Tensor, paddings: tp.Tuple[int, int], mode: str = 'constant', value: float = 0.):
     """Tiny wrapper around F.pad, just to allow for reflect padding on small input.
     If this is the case, we insert extra 0 padding to the right before the reflection happen.
     """
     length = x.shape[-1]
     padding_left, padding_right = paddings
     assert padding_left >= 0 and padding_right >= 0, (padding_left, padding_right)
-    if mode == "reflect":
+    if mode == 'reflect':
         max_pad = max(padding_left, padding_right)
         extra_pad = 0
         if length <= max_pad:
@@ -137,24 +120,20 @@ def unpad1d(x: torch.Tensor, paddings: tp.Tuple[int, int]):
     assert padding_left >= 0 and padding_right >= 0, (padding_left, padding_right)
     assert (padding_left + padding_right) <= x.shape[-1]
     end = x.shape[-1] - padding_right
-    return x[..., padding_left:end]
+    return x[..., padding_left: end]
 
 
 class Conv1d(nn.Conv1d):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
+    
     def forward(self, x: Tensor, causal=False) -> Tensor:
         kernel_size = self.kernel_size[0]
         stride = self.stride[0]
         dilation = self.dilation[0]
-        kernel_size = (
-            kernel_size - 1
-        ) * dilation + 1  # effective kernel size with dilations
+        kernel_size = (kernel_size - 1) * dilation + 1  # effective kernel size with dilations
         padding_total = kernel_size - stride
-        extra_padding = get_extra_padding_for_conv1d(
-            x, kernel_size, stride, padding_total
-        )
+        extra_padding = get_extra_padding_for_conv1d(x, kernel_size, stride, padding_total)
         if causal:
             # Left padding for causal
             x = pad1d(x, (padding_total, extra_padding))
@@ -164,8 +143,7 @@ class Conv1d(nn.Conv1d):
             padding_left = padding_total - padding_right
             x = pad1d(x, (padding_left, padding_right + extra_padding))
         return super().forward(x)
-
-
+        
 class ConvTranspose1d(nn.ConvTranspose1d):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -191,7 +169,7 @@ class ConvTranspose1d(nn.ConvTranspose1d):
             padding_left = padding_total - padding_right
             y = unpad1d(y, (padding_left, padding_right))
         return y
-
+    
 
 def Downsample1d(
     in_channels: int, out_channels: int, factor: int, kernel_multiplier: int = 2
@@ -202,7 +180,7 @@ def Downsample1d(
         in_channels=in_channels,
         out_channels=out_channels,
         kernel_size=factor * kernel_multiplier + 1,
-        stride=factor,
+        stride=factor
     )
 
 
@@ -211,19 +189,25 @@ def Upsample1d(
 ) -> nn.Module:
 
     if factor == 1:
-        return Conv1d(in_channels=in_channels, out_channels=out_channels, kernel_size=3)
+        return Conv1d(
+            in_channels=in_channels, out_channels=out_channels, kernel_size=3
+        )
 
     if use_nearest:
         return nn.Sequential(
             nn.Upsample(scale_factor=factor, mode="nearest"),
-            Conv1d(in_channels=in_channels, out_channels=out_channels, kernel_size=3),
+            Conv1d(
+                in_channels=in_channels,
+                out_channels=out_channels,
+                kernel_size=3
+            ),
         )
     else:
         return ConvTranspose1d(
             in_channels=in_channels,
             out_channels=out_channels,
             kernel_size=factor * 2,
-            stride=factor,
+            stride=factor
         )
 
 
@@ -238,7 +222,7 @@ class ConvBlock1d(nn.Module):
         dilation: int = 1,
         num_groups: int = 8,
         use_norm: bool = True,
-        use_snake: bool = False,
+        use_snake: bool = False
     ) -> None:
         super().__init__()
 
@@ -251,7 +235,7 @@ class ConvBlock1d(nn.Module):
         if use_snake:
             self.activation = Snake1d(in_channels)
         else:
-            self.activation = nn.SiLU()
+            self.activation = nn.SiLU() 
 
         self.project = Conv1d(
             in_channels=in_channels,
@@ -262,10 +246,7 @@ class ConvBlock1d(nn.Module):
         )
 
     def forward(
-        self,
-        x: Tensor,
-        scale_shift: Optional[Tuple[Tensor, Tensor]] = None,
-        causal=False,
+        self, x: Tensor, scale_shift: Optional[Tuple[Tensor, Tensor]] = None, causal=False
     ) -> Tensor:
         x = self.groupnorm(x)
         if exists(scale_shift):
@@ -321,7 +302,7 @@ class ResnetBlock1d(nn.Module):
             dilation=dilation,
             use_norm=use_norm,
             num_groups=num_groups,
-            use_snake=use_snake,
+            use_snake=use_snake
         )
 
         if self.use_mapping:
@@ -335,7 +316,7 @@ class ResnetBlock1d(nn.Module):
             out_channels=out_channels,
             use_norm=use_norm,
             num_groups=num_groups,
-            use_snake=use_snake,
+            use_snake=use_snake
         )
 
         self.to_out = (
@@ -344,9 +325,7 @@ class ResnetBlock1d(nn.Module):
             else nn.Identity()
         )
 
-    def forward(
-        self, x: Tensor, mapping: Optional[Tensor] = None, causal=False
-    ) -> Tensor:
+    def forward(self, x: Tensor, mapping: Optional[Tensor] = None, causal=False) -> Tensor:
         assert_message = "context mapping required if context_mapping_features > 0"
         assert not (self.use_mapping ^ exists(mapping)), assert_message
 
@@ -380,12 +359,10 @@ class Patcher(nn.Module):
             out_channels=out_channels // patch_size,
             num_groups=1,
             context_mapping_features=context_mapping_features,
-            use_snake=use_snake,
+            use_snake=use_snake
         )
 
-    def forward(
-        self, x: Tensor, mapping: Optional[Tensor] = None, causal=False
-    ) -> Tensor:
+    def forward(self, x: Tensor, mapping: Optional[Tensor] = None, causal=False) -> Tensor:
         x = self.block(x, mapping, causal=causal)
         x = rearrange(x, "b c (l p) -> b (c p) l", p=self.patch_size)
         return x
@@ -398,7 +375,7 @@ class Unpatcher(nn.Module):
         out_channels: int,
         patch_size: int,
         context_mapping_features: Optional[int] = None,
-        use_snake: bool = False,
+        use_snake: bool = False
     ):
         super().__init__()
         assert_message = f"in_channels must be divisible by patch_size ({patch_size})"
@@ -410,12 +387,10 @@ class Unpatcher(nn.Module):
             out_channels=out_channels,
             num_groups=1,
             context_mapping_features=context_mapping_features,
-            use_snake=use_snake,
+            use_snake=use_snake
         )
 
-    def forward(
-        self, x: Tensor, mapping: Optional[Tensor] = None, causal=False
-    ) -> Tensor:
+    def forward(self, x: Tensor, mapping: Optional[Tensor] = None, causal=False) -> Tensor:
         x = rearrange(x, " b (c p) l -> b c (l p) ", p=self.patch_size)
         x = self.block(x, mapping, causal=causal)
         return x
@@ -424,8 +399,6 @@ class Unpatcher(nn.Module):
 """
 Attention Components
 """
-
-
 def FeedForward(features: int, multiplier: int) -> nn.Module:
     mid_features = features * multiplier
     return nn.Sequential(
@@ -433,7 +406,6 @@ def FeedForward(features: int, multiplier: int) -> nn.Module:
         nn.GELU(),
         nn.Linear(in_features=mid_features, out_features=features),
     )
-
 
 def add_mask(sim: Tensor, mask: Tensor) -> Tensor:
     b, ndim = sim.shape[0], mask.ndim
@@ -445,13 +417,11 @@ def add_mask(sim: Tensor, mask: Tensor) -> Tensor:
     sim = sim.masked_fill(~mask, max_neg_value)
     return sim
 
-
 def causal_mask(q: Tensor, k: Tensor) -> Tensor:
     b, i, j, device = q.shape[0], q.shape[-2], k.shape[-2], q.device
     mask = ~torch.ones((i, j), dtype=torch.bool, device=device).triu(j - i + 1)
     mask = repeat(mask, "n m -> b n m", b=b)
     return mask
-
 
 class AttentionBase(nn.Module):
     def __init__(
@@ -468,16 +438,16 @@ class AttentionBase(nn.Module):
         mid_features = head_features * num_heads
         out_features = default(out_features, features)
 
-        self.to_out = nn.Linear(in_features=mid_features, out_features=out_features)
+        self.to_out = nn.Linear(
+            in_features=mid_features, out_features=out_features
+        )
 
-        self.use_flash = torch.cuda.is_available() and version.parse(
-            torch.__version__
-        ) >= version.parse("2.0.0")
+        self.use_flash = torch.cuda.is_available() and version.parse(torch.__version__) >= version.parse('2.0.0')
 
         if not self.use_flash:
             return
 
-        device_properties = torch.cuda.get_device_properties(torch.device("cuda"))
+        device_properties = torch.cuda.get_device_properties(torch.device('cuda'))
 
         if device_properties.major == 8 and device_properties.minor == 0:
             # Use flash attention for A100 GPUs
@@ -487,12 +457,7 @@ class AttentionBase(nn.Module):
             self.sdp_kernel_config = (False, True, True)
 
     def forward(
-        self,
-        q: Tensor,
-        k: Tensor,
-        v: Tensor,
-        mask: Optional[Tensor] = None,
-        is_causal: bool = False,
+        self, q: Tensor, k: Tensor, v: Tensor, mask: Optional[Tensor] = None, is_causal: bool = False
     ) -> Tensor:
         # Split heads
         q, k, v = rearrange_many((q, k, v), "b n (h d) -> b h n d", h=self.num_heads)
@@ -513,13 +478,10 @@ class AttentionBase(nn.Module):
             out = einsum("... n m, ... m d -> ... n d", attn, v)
         else:
             with sdp_kernel(*self.sdp_kernel_config):
-                out = F.scaled_dot_product_attention(
-                    q, k, v, attn_mask=mask, is_causal=is_causal
-                )
+                out = F.scaled_dot_product_attention(q, k, v, attn_mask=mask, is_causal=is_causal)
 
         out = rearrange(out, "b h n d -> b n (h d)")
         return self.to_out(out)
-
 
 class Attention(nn.Module):
     def __init__(
@@ -555,8 +517,8 @@ class Attention(nn.Module):
 
     def forward(
         self,
-        x: Tensor,  # [b, n, c]
-        context: Optional[Tensor] = None,  # [b, m, d]
+        x: Tensor, # [b, n, c]
+        context: Optional[Tensor] = None, # [b, m, d]
         context_mask: Optional[Tensor] = None,  # [b, m], false is masked,
         causal: Optional[bool] = False,
     ) -> Tensor:
@@ -586,7 +548,6 @@ def FeedForward(features: int, multiplier: int) -> nn.Module:
         nn.Linear(in_features=mid_features, out_features=features),
     )
 
-
 """
 Transformer Blocks
 """
@@ -606,7 +567,9 @@ class TransformerBlock(nn.Module):
         self.use_cross_attention = exists(context_features) and context_features > 0
 
         self.attention = Attention(
-            features=features, num_heads=num_heads, head_features=head_features
+            features=features,
+            num_heads=num_heads,
+            head_features=head_features
         )
 
         if self.use_cross_attention:
@@ -614,19 +577,12 @@ class TransformerBlock(nn.Module):
                 features=features,
                 num_heads=num_heads,
                 head_features=head_features,
-                context_features=context_features,
+                context_features=context_features
             )
 
         self.feed_forward = FeedForward(features=features, multiplier=multiplier)
 
-    def forward(
-        self,
-        x: Tensor,
-        *,
-        context: Optional[Tensor] = None,
-        context_mask: Optional[Tensor] = None,
-        causal: Optional[bool] = False,
-    ) -> Tensor:
+    def forward(self, x: Tensor, *, context: Optional[Tensor] = None, context_mask: Optional[Tensor] = None, causal: Optional[bool] = False) -> Tensor:
         x = self.attention(x, causal=causal) + x
         if self.use_cross_attention:
             x = self.cross_attention(x, context=context, context_mask=context_mask) + x
@@ -683,14 +639,7 @@ class Transformer1d(nn.Module):
             ),
         )
 
-    def forward(
-        self,
-        x: Tensor,
-        *,
-        context: Optional[Tensor] = None,
-        context_mask: Optional[Tensor] = None,
-        causal=False,
-    ) -> Tensor:
+    def forward(self, x: Tensor, *, context: Optional[Tensor] = None, context_mask: Optional[Tensor] = None, causal=False) -> Tensor:
         x = self.to_in(x)
         for block in self.blocks:
             x = block(x, context=context, context_mask=context_mask, causal=causal)
@@ -790,15 +739,16 @@ class DownsampleBlock1d(nn.Module):
                     out_channels=channels,
                     num_groups=num_groups,
                     context_mapping_features=context_mapping_features,
-                    use_snake=use_snake,
+                    use_snake=use_snake
                 )
                 for i in range(num_layers)
             ]
         )
 
         if self.use_transformer:
-            assert (exists(attention_heads) or exists(attention_features)) and exists(
-                attention_multiplier
+            assert (
+                (exists(attention_heads) or exists(attention_features))
+                and exists(attention_multiplier)
             )
 
             if attention_features is None and attention_heads is not None:
@@ -813,7 +763,7 @@ class DownsampleBlock1d(nn.Module):
                 num_heads=attention_heads,
                 head_features=attention_features,
                 multiplier=attention_multiplier,
-                context_features=context_embedding_features,
+                context_features=context_embedding_features
             )
 
         if self.use_extract:
@@ -822,7 +772,7 @@ class DownsampleBlock1d(nn.Module):
                 in_channels=out_channels,
                 out_channels=extract_channels,
                 num_groups=num_extract_groups,
-                use_snake=use_snake,
+                use_snake=use_snake
             )
 
     def forward(
@@ -833,7 +783,7 @@ class DownsampleBlock1d(nn.Module):
         channels: Optional[Tensor] = None,
         embedding: Optional[Tensor] = None,
         embedding_mask: Optional[Tensor] = None,
-        causal: Optional[bool] = False,
+        causal: Optional[bool] = False
     ) -> Union[Tuple[Tensor, List[Tensor]], Tensor]:
 
         if self.use_pre_downsample:
@@ -848,9 +798,7 @@ class DownsampleBlock1d(nn.Module):
             skips += [x] if self.use_skip else []
 
         if self.use_transformer:
-            x = self.transformer(
-                x, context=embedding, context_mask=embedding_mask, causal=causal
-            )
+            x = self.transformer(x, context=embedding, context_mask=embedding_mask, causal=causal)
             skips += [x] if self.use_skip else []
 
         if not self.use_pre_downsample:
@@ -892,7 +840,7 @@ class UpsampleBlock1d(nn.Module):
         self.use_pre_upsample = use_pre_upsample
         self.use_transformer = num_transformer_blocks > 0
         self.use_skip = use_skip
-        self.skip_scale = 2**-0.5 if use_skip_scale else 1.0
+        self.skip_scale = 2 ** -0.5 if use_skip_scale else 1.0
 
         channels = out_channels if use_pre_upsample else in_channels
 
@@ -903,15 +851,16 @@ class UpsampleBlock1d(nn.Module):
                     out_channels=channels,
                     num_groups=num_groups,
                     context_mapping_features=context_mapping_features,
-                    use_snake=use_snake,
+                    use_snake=use_snake
                 )
                 for _ in range(num_layers)
             ]
         )
 
         if self.use_transformer:
-            assert (exists(attention_heads) or exists(attention_features)) and exists(
-                attention_multiplier
+            assert (
+                (exists(attention_heads) or exists(attention_features))
+                and exists(attention_multiplier)
             )
 
             if attention_features is None and attention_heads is not None:
@@ -942,7 +891,7 @@ class UpsampleBlock1d(nn.Module):
                 in_channels=out_channels,
                 out_channels=extract_channels,
                 num_groups=num_extract_groups,
-                use_snake=use_snake,
+                use_snake=use_snake
             )
 
     def add_skip(self, x: Tensor, skip: Tensor) -> Tensor:
@@ -956,7 +905,7 @@ class UpsampleBlock1d(nn.Module):
         mapping: Optional[Tensor] = None,
         embedding: Optional[Tensor] = None,
         embedding_mask: Optional[Tensor] = None,
-        causal: Optional[bool] = False,
+        causal: Optional[bool] = False
     ) -> Union[Tuple[Tensor, Tensor], Tensor]:
 
         if self.use_pre_upsample:
@@ -967,9 +916,7 @@ class UpsampleBlock1d(nn.Module):
             x = block(x, mapping=mapping, causal=causal)
 
         if self.use_transformer:
-            x = self.transformer(
-                x, context=embedding, context_mask=embedding_mask, causal=causal
-            )
+            x = self.transformer(x, context=embedding, context_mask=embedding_mask, causal=causal)
 
         if not self.use_pre_upsample:
             x = self.upsample(x)
@@ -1003,12 +950,13 @@ class BottleneckBlock1d(nn.Module):
             out_channels=channels,
             num_groups=num_groups,
             context_mapping_features=context_mapping_features,
-            use_snake=use_snake,
+            use_snake=use_snake
         )
 
         if self.use_transformer:
-            assert (exists(attention_heads) or exists(attention_features)) and exists(
-                attention_multiplier
+            assert (
+                (exists(attention_heads) or exists(attention_features))
+                and exists(attention_multiplier)
             )
 
             if attention_features is None and attention_heads is not None:
@@ -1031,7 +979,7 @@ class BottleneckBlock1d(nn.Module):
             out_channels=channels,
             num_groups=num_groups,
             context_mapping_features=context_mapping_features,
-            use_snake=use_snake,
+            use_snake=use_snake
         )
 
     def forward(
@@ -1041,13 +989,11 @@ class BottleneckBlock1d(nn.Module):
         mapping: Optional[Tensor] = None,
         embedding: Optional[Tensor] = None,
         embedding_mask: Optional[Tensor] = None,
-        causal: Optional[bool] = False,
+        causal: Optional[bool] = False
     ) -> Tensor:
         x = self.pre_block(x, mapping=mapping, causal=causal)
         if self.use_transformer:
-            x = self.transformer(
-                x, context=embedding, context_mask=embedding_mask, causal=causal
-            )
+            x = self.transformer(x, context=embedding, context_mask=embedding_mask, causal=causal)
         x = self.post_block(x, mapping=mapping, causal=causal)
         return x
 
@@ -1161,7 +1107,7 @@ class UNet1d(nn.Module):
             out_channels=channels * multipliers[0],
             patch_size=patch_size,
             context_mapping_features=context_mapping_features,
-            use_snake=use_snake,
+            use_snake=use_snake
         )
 
         self.downsamples = nn.ModuleList(
@@ -1224,7 +1170,7 @@ class UNet1d(nn.Module):
             out_channels=out_channels,
             patch_size=patch_size,
             context_mapping_features=context_mapping_features,
-            use_snake=use_snake,
+            use_snake=use_snake
         )
 
     def get_channels(
@@ -1298,32 +1244,14 @@ class UNet1d(nn.Module):
         for i, downsample in enumerate(self.downsamples):
             channels = self.get_channels(channels_list, layer=i + 1)
             x, skips = downsample(
-                x,
-                mapping=mapping,
-                channels=channels,
-                embedding=embedding,
-                embedding_mask=embedding_mask,
-                causal=causal,
+                x, mapping=mapping, channels=channels, embedding=embedding, embedding_mask=embedding_mask, causal=causal
             )
             skips_list += [skips]
 
-        x = self.bottleneck(
-            x,
-            mapping=mapping,
-            embedding=embedding,
-            embedding_mask=embedding_mask,
-            causal=causal,
-        )
+        x = self.bottleneck(x, mapping=mapping, embedding=embedding, embedding_mask=embedding_mask, causal=causal)
         for i, upsample in enumerate(self.upsamples):
             skips = skips_list.pop()
-            x = upsample(
-                x,
-                skips=skips,
-                mapping=mapping,
-                embedding=embedding,
-                embedding_mask=embedding_mask,
-                causal=causal,
-            )
+            x = upsample(x, skips=skips, mapping=mapping, embedding=embedding, embedding_mask=embedding_mask, causal=causal)
 
         x += skips_list.pop()
         x = self.to_out(x, mapping, causal=causal)
@@ -1361,6 +1289,7 @@ def rand_bool(shape: Any, proba: float, device: Any = None) -> Tensor:
 
 
 class UNetCFG1d(UNet1d):
+
     """UNet1d with Classifier-Free Guidance"""
 
     def __init__(
@@ -1385,7 +1314,7 @@ class UNetCFG1d(UNet1d):
                 nn.GELU(),
             )
 
-            context_embedding_max_length += 1  # Add one for time embedding
+            context_embedding_max_length += 1   # Add one for time embedding
 
         self.fixed_embedding = FixedEmbedding(
             max_length=context_embedding_max_length, features=context_embedding_features
@@ -1410,14 +1339,10 @@ class UNetCFG1d(UNet1d):
         b, device = embedding.shape[0], embedding.device
 
         if self.use_xattn_time:
-            embedding = torch.cat(
-                [embedding, self.to_time_embedding(time).unsqueeze(1)], dim=1
-            )
+            embedding = torch.cat([embedding, self.to_time_embedding(time).unsqueeze(1)], dim=1)
 
             if embedding_mask is not None:
-                embedding_mask = torch.cat(
-                    [embedding_mask, torch.ones((b, 1), device=device)], dim=1
-                )
+                embedding_mask = torch.cat([embedding_mask, torch.ones((b, 1), device=device)], dim=1)
 
         fixed_embedding = self.fixed_embedding(embedding)
 
@@ -1435,14 +1360,10 @@ class UNetCFG1d(UNet1d):
 
                 if negative_embedding is not None:
                     if negative_embedding_mask is not None:
-                        negative_embedding_mask = negative_embedding_mask.to(
-                            torch.bool
-                        ).unsqueeze(2)
+                        negative_embedding_mask = negative_embedding_mask.to(torch.bool).unsqueeze(2)
 
-                        negative_embedding = torch.where(
-                            negative_embedding_mask, negative_embedding, fixed_embedding
-                        )
-
+                        negative_embedding = torch.where(negative_embedding_mask, negative_embedding, fixed_embedding)
+                    
                     batch_embed = torch.cat([embedding, negative_embedding], dim=0)
 
                 else:
@@ -1465,33 +1386,13 @@ class UNetCFG1d(UNet1d):
                         batch_channels += [torch.cat([channels, channels], dim=0)]
 
                 # Compute both normal and fixed embedding outputs
-                batch_out = super().forward(
-                    batch_x,
-                    batch_time,
-                    embedding=batch_embed,
-                    embedding_mask=batch_mask,
-                    features=batch_features,
-                    channels_list=batch_channels,
-                    **kwargs,
-                )
+                batch_out = super().forward(batch_x, batch_time, embedding=batch_embed, embedding_mask=batch_mask, features=batch_features, channels_list=batch_channels, **kwargs)
                 out, out_masked = batch_out.chunk(2, dim=0)
-
+           
             else:
                 # Compute both normal and fixed embedding outputs
-                out = super().forward(
-                    x,
-                    time,
-                    embedding=embedding,
-                    embedding_mask=embedding_mask,
-                    **kwargs,
-                )
-                out_masked = super().forward(
-                    x,
-                    time,
-                    embedding=fixed_embedding,
-                    embedding_mask=embedding_mask,
-                    **kwargs,
-                )
+                out = super().forward(x, time, embedding=embedding, embedding_mask=embedding_mask, **kwargs)
+                out_masked = super().forward(x, time, embedding=fixed_embedding, embedding_mask=embedding_mask, **kwargs)
 
             out_cfg = out_masked + (out - out_masked) * embedding_scale
 
@@ -1500,22 +1401,18 @@ class UNetCFG1d(UNet1d):
                 out_std = out.std(dim=1, keepdim=True)
                 out_cfg_std = out_cfg.std(dim=1, keepdim=True)
 
-                return (
-                    scale_phi * (out_cfg * (out_std / out_cfg_std))
-                    + (1 - scale_phi) * out_cfg
-                )
+                return scale_phi * (out_cfg * (out_std/out_cfg_std)) + (1-scale_phi) * out_cfg
 
             else:
 
                 return out_cfg
-
+                
         else:
-            return super().forward(
-                x, time, embedding=embedding, embedding_mask=embedding_mask, **kwargs
-            )
+            return super().forward(x, time, embedding=embedding, embedding_mask=embedding_mask, **kwargs)
 
 
 class UNetNCCA1d(UNet1d):
+
     """UNet1d with Noise Channel Conditioning Augmentation"""
 
     def __init__(self, context_features: int, **kwargs):
@@ -1583,7 +1480,6 @@ def XUNet1d(type: str = "base", **kwargs) -> UNet1d:
         return UNetNCCA1d(**kwargs)
     else:
         raise ValueError(f"Unknown XUNet1d type: {type}")
-
 
 class NumberEmbedder(nn.Module):
     def __init__(

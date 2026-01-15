@@ -18,19 +18,19 @@ modelscope==1.15.0
 networkx==3.1
 numpy==1.24.4
 omegaconf==2.3.0
-onnxruntime==1.16.0; sys_platform == 'darwin' or sys_platform == 'windows'
 onnxruntime-gpu==1.16.0; sys_platform == 'linux'
+onnxruntime==1.16.0; sys_platform == 'darwin' or sys_platform == 'windows'
 openai-whisper==20231117
 protobuf==4.25
 pydantic==2.7.0
-Requests==2.32.3
 rich==13.7.1
+Requests==2.32.3
 safetensors==0.4.5
 soundfile==0.12.1
 tensorboard==2.14.0
-torch==2.3.0
-torchaudio==2.3.0
 transformers==4.44.1
 uvicorn==0.32.0
-WeTextProcessing==1.0.3
 wget==3.2
+WeTextProcessing==1.0.3
+torch==2.3.0
+torchaudio==2.3.0

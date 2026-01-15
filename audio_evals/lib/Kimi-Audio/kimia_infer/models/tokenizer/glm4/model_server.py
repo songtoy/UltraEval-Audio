@@ -10,7 +10,6 @@ Run Int4 inference with:
 python model_server.py --host localhost --model-path THUDM/glm-4-voice-9b --port 10000 --dtype int4 --device cuda:0
 
 """
-
 import argparse
 import json
 
@@ -63,28 +62,22 @@ class TokenStreamer(BaseStreamer):
 
 
 class ModelWorker:
-    def __init__(self, model_path, dtype="bfloat16", device="cuda"):
+    def __init__(self, model_path, dtype="bfloat16", device='cuda'):
         self.device = device
-        self.bnb_config = (
-            BitsAndBytesConfig(
-                load_in_4bit=True,
-                bnb_4bit_use_double_quant=True,
-                bnb_4bit_quant_type="nf4",
-                bnb_4bit_compute_dtype=torch.bfloat16,
-            )
-            if dtype == "int4"
-            else None
-        )
+        self.bnb_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_use_double_quant=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.bfloat16
+        ) if dtype == "int4" else None
 
         self.glm_model = AutoModel.from_pretrained(
             model_path,
             trust_remote_code=True,
             quantization_config=self.bnb_config if self.bnb_config else None,
-            device_map={"": 0},
+            device_map={"": 0}
         ).eval()
-        self.glm_tokenizer = AutoTokenizer.from_pretrained(
-            model_path, trust_remote_code=True
-        )
+        self.glm_tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
 
     @torch.inference_mode()
     def generate_stream(self, params):
@@ -107,7 +100,7 @@ class ModelWorker:
                 temperature=float(temperature),
                 top_p=float(top_p),
                 streamer=streamer
-            ),
+            )
         )
         thread.start()
         for token_id in streamer:

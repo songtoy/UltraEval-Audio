@@ -125,24 +125,24 @@ Some code in this project is from:
 
 ```
 @misc{zeng2024glm4,
-      title={GLM-4-Voice: Towards Intelligent and Human-Like End-to-End Spoken Chatbot},
+      title={GLM-4-Voice: Towards Intelligent and Human-Like End-to-End Spoken Chatbot}, 
       author={Aohan Zeng and Zhengxiao Du and Mingdao Liu and Kedong Wang and Shengmin Jiang and Lei Zhao and Yuxiao Dong and Jie Tang},
       year={2024},
       eprint={2412.02612},
       archivePrefix={arXiv},
       primaryClass={cs.CL},
-      url={https://arxiv.org/abs/2412.02612},
+      url={https://arxiv.org/abs/2412.02612}, 
 }
 ```
 
 ```
 @misc{zeng2024scaling,
-      title={Scaling Speech-Text Pre-training with Synthetic Interleaved Data},
+      title={Scaling Speech-Text Pre-training with Synthetic Interleaved Data}, 
       author={Aohan Zeng and Zhengxiao Du and Mingdao Liu and Lei Zhang and Shengmin Jiang and Yuxiao Dong and Jie Tang},
       year={2024},
       eprint={2411.17607},
       archivePrefix={arXiv},
       primaryClass={cs.CL},
-      url={https://arxiv.org/abs/2411.17607},
+      url={https://arxiv.org/abs/2411.17607}, 
 }
 ```

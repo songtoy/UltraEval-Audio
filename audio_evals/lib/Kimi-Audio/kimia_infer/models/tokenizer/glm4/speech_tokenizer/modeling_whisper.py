@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright 2022 The OpenAI Authors and The HuggingFace Inc. team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,12 +26,7 @@ from torch import nn
 from torch.nn import CrossEntropyLoss
 
 from transformers.activations import ACT2FN
-from transformers.cache_utils import (
-    Cache,
-    DynamicCache,
-    EncoderDecoderCache,
-    StaticCache,
-)
+from transformers.cache_utils import Cache, DynamicCache, EncoderDecoderCache, StaticCache
 from transformers.modeling_attn_mask_utils import AttentionMaskConverter
 from dataclasses import dataclass
 from transformers.modeling_outputs import (
@@ -72,21 +68,21 @@ class QuantizedBaseModelOutput(BaseModelOutput):
 def vector_quantize(inputs, codebook):
     embedding_size = codebook.size(1)
     inputs_flatten = inputs.reshape(-1, embedding_size)
-    codebook_sqr = torch.sum(codebook**2, dim=1)
-    inputs_sqr = torch.sum(inputs_flatten**2, dim=1, keepdim=True)
+    codebook_sqr = torch.sum(codebook ** 2, dim=1)
+    inputs_sqr = torch.sum(inputs_flatten ** 2, dim=1, keepdim=True)
     # Compute the distances to the codebook
-    distances = torch.addmm(
-        codebook_sqr + inputs_sqr, inputs_flatten, codebook.t(), alpha=-2.0, beta=1.0
-    )
+    distances = torch.addmm(codebook_sqr + inputs_sqr,
+                            inputs_flatten, codebook.t(), alpha=-2.0, beta=1.0)
 
     _, indices_flatten = torch.min(distances, dim=1)
-    codes_flatten = torch.index_select(codebook, dim=0, index=indices_flatten)
+    codes_flatten = torch.index_select(codebook, dim=0,
+                                       index=indices_flatten)
     codes = codes_flatten.view_as(inputs)
     return codes, indices_flatten, distances
 
 
 def mse_loss_with_mask(input, target, mask):
-    loss = torch.nn.functional.mse_loss(input, target, reduction="none")
+    loss = torch.nn.functional.mse_loss(input, target, reduction='none')
     loss = loss.mean(dim=-1)
     loss = loss * mask
     return loss.sum() / mask.sum()
@@ -103,7 +99,7 @@ class CausalConv1d(nn.Conv1d):
         dilation=1,
         groups=1,
         bias=True,
-        **kwargs,
+        **kwargs
     ):
         super(CausalConv1d, self).__init__(
             in_channels,
@@ -114,29 +110,27 @@ class CausalConv1d(nn.Conv1d):
             dilation=dilation,
             groups=groups,
             bias=bias,
-            **kwargs,
+            **kwargs
         )
 
         self.left_padding = dilation * (kernel_size - 1)
 
     def forward(self, inp):
-        x = torch.nn.functional.pad(
-            inp.unsqueeze(2), (self.left_padding, 0, 0, 0)
-        ).squeeze(2)
+        x = torch.nn.functional.pad(inp.unsqueeze(2), (self.left_padding, 0, 0, 0)).squeeze(2)
 
         return super(CausalConv1d, self).forward(x)
 
 
 # Copied from transformers.models.llama.modeling_llama._prepare_4d_causal_attention_mask_with_cache_position
 def _prepare_4d_causal_attention_mask_with_cache_position(
-    attention_mask: torch.Tensor,
-    sequence_length: int,
-    target_length: int,
-    dtype: torch.dtype,
-    device: torch.device,
-    min_dtype: float,
-    cache_position: torch.Tensor,
-    batch_size: int,
+        attention_mask: torch.Tensor,
+        sequence_length: int,
+        target_length: int,
+        dtype: torch.dtype,
+        device: torch.device,
+        min_dtype: float,
+        cache_position: torch.Tensor,
+        batch_size: int,
 ):
     """
     Creates a causal 4D mask of shape `(batch_size, 1, query_length, key_value_length)` from a 2D mask of shape
@@ -164,30 +158,19 @@ def _prepare_4d_causal_attention_mask_with_cache_position(
         # In this case we assume that the mask comes already in inverted form and requires no inversion or slicing.
         causal_mask = attention_mask
     else:
-        causal_mask = torch.full(
-            (sequence_length, target_length),
-            fill_value=min_dtype,
-            dtype=dtype,
-            device=device,
-        )
+        causal_mask = torch.full((sequence_length, target_length), fill_value=min_dtype, dtype=dtype, device=device)
         if sequence_length != 1:
             causal_mask = torch.triu(causal_mask, diagonal=1)
-        causal_mask *= torch.arange(
-            target_length, device=device
-        ) > cache_position.reshape(-1, 1)
+        causal_mask *= torch.arange(target_length, device=device) > cache_position.reshape(-1, 1)
         causal_mask = causal_mask[None, None, :, :].expand(batch_size, 1, -1, -1)
         if attention_mask is not None:
-            causal_mask = (
-                causal_mask.clone()
-            )  # copy to contiguous memory for in-place edit
+            causal_mask = causal_mask.clone()  # copy to contiguous memory for in-place edit
             mask_length = attention_mask.shape[-1]
-            padding_mask = (
-                causal_mask[:, :, :, :mask_length] + attention_mask[:, None, None, :]
-            )
+            padding_mask = causal_mask[:, :, :, :mask_length] + attention_mask[:, None, None, :]
             padding_mask = padding_mask == 0
-            causal_mask[:, :, :, :mask_length] = causal_mask[
-                :, :, :, :mask_length
-            ].masked_fill(padding_mask, min_dtype)
+            causal_mask[:, :, :, :mask_length] = causal_mask[:, :, :, :mask_length].masked_fill(
+                padding_mask, min_dtype
+            )
 
     return causal_mask
 
@@ -205,9 +188,7 @@ def sinusoids(length: int, channels: int, max_timescale: float = 10000) -> torch
 
 
 # Copied from transformers.models.bart.modeling_bart.shift_tokens_right
-def shift_tokens_right(
-    input_ids: torch.Tensor, pad_token_id: int, decoder_start_token_id: int
-):
+def shift_tokens_right(input_ids: torch.Tensor, pad_token_id: int, decoder_start_token_id: int):
     """
     Shift input ids one token to the right.
     """
@@ -225,11 +206,11 @@ def shift_tokens_right(
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2._compute_mask_indices
 def _compute_mask_indices(
-    shape: Tuple[int, int],
-    mask_prob: float,
-    mask_length: int,
-    attention_mask: Optional[torch.LongTensor] = None,
-    min_masks: int = 0,
+        shape: Tuple[int, int],
+        mask_prob: float,
+        mask_length: int,
+        attention_mask: Optional[torch.LongTensor] = None,
+        min_masks: int = 0,
 ) -> np.ndarray:
     """
     Computes random mask spans for a given shape. Used to implement [SpecAugment: A Simple Data Augmentation Method for
@@ -314,11 +295,7 @@ def _compute_mask_indices(
             dummy_mask_idx = spec_aug_mask_idx[0]
 
         spec_aug_mask_idx = np.concatenate(
-            [
-                spec_aug_mask_idx,
-                np.ones(max_num_masked_span - num_masked_span, dtype=np.int32)
-                * dummy_mask_idx,
-            ]
+            [spec_aug_mask_idx, np.ones(max_num_masked_span - num_masked_span, dtype=np.int32) * dummy_mask_idx]
         )
         spec_aug_mask_idxs.append(spec_aug_mask_idx)
 
@@ -328,22 +305,18 @@ def _compute_mask_indices(
     spec_aug_mask_idxs = np.broadcast_to(
         spec_aug_mask_idxs[:, :, None], (batch_size, max_num_masked_span, mask_length)
     )
-    spec_aug_mask_idxs = spec_aug_mask_idxs.reshape(
-        batch_size, max_num_masked_span * mask_length
-    )
+    spec_aug_mask_idxs = spec_aug_mask_idxs.reshape(batch_size, max_num_masked_span * mask_length)
 
     # add offset to the starting indexes so that indexes now create a span
     offsets = np.arange(mask_length)[None, None, :]
-    offsets = np.broadcast_to(
-        offsets, (batch_size, max_num_masked_span, mask_length)
-    ).reshape(batch_size, max_num_masked_span * mask_length)
+    offsets = np.broadcast_to(offsets, (batch_size, max_num_masked_span, mask_length)).reshape(
+        batch_size, max_num_masked_span * mask_length
+    )
     spec_aug_mask_idxs = spec_aug_mask_idxs + offsets
 
     # ensure that we cannot have indices larger than sequence_length
     if spec_aug_mask_idxs.max() > sequence_length - 1:
-        spec_aug_mask_idxs[spec_aug_mask_idxs > sequence_length - 1] = (
-            sequence_length - 1
-        )
+        spec_aug_mask_idxs[spec_aug_mask_idxs > sequence_length - 1] = sequence_length - 1
 
     # scatter indices to mask
     np.put_along_axis(spec_aug_mask, spec_aug_mask_idxs, 1, -1)
@@ -352,16 +325,12 @@ def _compute_mask_indices(
 
 
 class WhisperPositionalEmbedding(nn.Embedding):
-    def __init__(
-        self, num_positions: int, embedding_dim: int, padding_idx: Optional[int] = None
-    ):
+    def __init__(self, num_positions: int, embedding_dim: int, padding_idx: Optional[int] = None):
         super().__init__(num_positions, embedding_dim)
 
     def forward(self, input_ids, past_key_values_length=0, position_ids=None):
         if position_ids is None:
-            return self.weight[
-                past_key_values_length : past_key_values_length + input_ids.shape[1]
-            ]
+            return self.weight[past_key_values_length: past_key_values_length + input_ids.shape[1]]
         else:
             return self.weight[position_ids]
 
@@ -370,15 +339,15 @@ class WhisperAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     def __init__(
-        self,
-        embed_dim: int,
-        num_heads: int,
-        dropout: float = 0.0,
-        is_decoder: bool = False,
-        bias: bool = True,
-        is_causal: bool = False,
-        layer_idx: Optional[int] = None,
-        config: Optional[WhisperVQConfig] = None,
+            self,
+            embed_dim: int,
+            num_heads: int,
+            dropout: float = 0.0,
+            is_decoder: bool = False,
+            bias: bool = True,
+            is_causal: bool = False,
+            layer_idx: Optional[int] = None,
+            config: Optional[WhisperVQConfig] = None,
     ):
         super().__init__()
         self.embed_dim = embed_dim
@@ -392,7 +361,7 @@ class WhisperAttention(nn.Module):
                 f"embed_dim must be divisible by num_heads (got `embed_dim`: {self.embed_dim}"
                 f" and `num_heads`: {num_heads})."
             )
-        self.scaling = self.head_dim**-0.5
+        self.scaling = self.head_dim ** -0.5
         self.is_decoder = is_decoder
         self.is_causal = is_causal
 
@@ -411,21 +380,17 @@ class WhisperAttention(nn.Module):
 
     # Copied from transformers.models.bart.modeling_bart.BartAttention._shape with BART->whisper
     def _shape(self, tensor: torch.Tensor, seq_len: int, bsz: int):
-        return (
-            tensor.view(bsz, seq_len, self.num_heads, self.head_dim)
-            .transpose(1, 2)
-            .contiguous()
-        )
+        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).transpose(1, 2).contiguous()
 
     def forward(
-        self,
-        hidden_states: torch.Tensor,
-        key_value_states: Optional[torch.Tensor] = None,
-        past_key_value: Optional[EncoderDecoderCache] = None,
-        attention_mask: Optional[torch.Tensor] = None,
-        layer_head_mask: Optional[torch.Tensor] = None,
-        output_attentions: bool = False,
-        cache_position: Optional[torch.LongTensor] = None,
+            self,
+            hidden_states: torch.Tensor,
+            key_value_states: Optional[torch.Tensor] = None,
+            past_key_value: Optional[EncoderDecoderCache] = None,
+            attention_mask: Optional[torch.Tensor] = None,
+            layer_head_mask: Optional[torch.Tensor] = None,
+            output_attentions: bool = False,
+            cache_position: Optional[torch.LongTensor] = None,
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Tuple[torch.Tensor]]]:
         """Input shape: Batch x Time x Channel"""
 
@@ -435,9 +400,7 @@ class WhisperAttention(nn.Module):
         bsz, tgt_len, _ = hidden_states.size()
 
         # get query proj
-        query_states = self._shape(
-            self.q_proj(hidden_states) * self.scaling, tgt_len, bsz
-        )
+        query_states = self._shape(self.q_proj(hidden_states) * self.scaling, tgt_len, bsz)
 
         if past_key_value is not None:
             is_updated = past_key_value.is_updated.get(self.layer_idx)
@@ -449,9 +412,7 @@ class WhisperAttention(nn.Module):
                 past_key_value = past_key_value.self_attention_cache
 
         # use key_value_states if cross attention
-        current_states = (
-            key_value_states if key_value_states is not None else hidden_states
-        )
+        current_states = key_value_states if key_value_states is not None else hidden_states
         if is_cross_attention and past_key_value and is_updated:
             # reuse k,v, cross_attentions
             key_states = past_key_value.key_cache[self.layer_idx]
@@ -463,10 +424,7 @@ class WhisperAttention(nn.Module):
                 # save all key/value_states to cache to be re-used for fast auto-regressive generation
                 cache_position = cache_position if not is_cross_attention else None
                 key_states, value_states = past_key_value.update(
-                    key_states,
-                    value_states,
-                    self.layer_idx,
-                    {"cache_position": cache_position},
+                    key_states, value_states, self.layer_idx, {"cache_position": cache_position}
                 )
 
         attn_weights = torch.matmul(query_states, key_states.transpose(2, 3))
@@ -485,9 +443,7 @@ class WhisperAttention(nn.Module):
                 )
             attn_weights = layer_head_mask.view(1, -1, 1, 1) * attn_weights
 
-        attn_probs = nn.functional.dropout(
-            attn_weights, p=self.dropout, training=self.training
-        )
+        attn_probs = nn.functional.dropout(attn_weights, p=self.dropout, training=self.training)
         attn_output = torch.matmul(attn_probs, value_states)
 
         if attn_output.size() != (bsz, self.num_heads, tgt_len, self.head_dim):
@@ -523,14 +479,14 @@ class WhisperFlashAttention2(WhisperAttention):
         self._flash_attn_uses_top_left_mask = not is_flash_attn_greater_or_equal_2_10()
 
     def forward(
-        self,
-        hidden_states: torch.Tensor,
-        key_value_states: Optional[torch.Tensor] = None,
-        past_key_value: Optional[EncoderDecoderCache] = None,
-        attention_mask: Optional[torch.Tensor] = None,
-        layer_head_mask: Optional[torch.Tensor] = None,
-        output_attentions: bool = False,
-        cache_position: Optional[torch.LongTensor] = None,
+            self,
+            hidden_states: torch.Tensor,
+            key_value_states: Optional[torch.Tensor] = None,
+            past_key_value: Optional[EncoderDecoderCache] = None,
+            attention_mask: Optional[torch.Tensor] = None,
+            layer_head_mask: Optional[torch.Tensor] = None,
+            output_attentions: bool = False,
+            cache_position: Optional[torch.LongTensor] = None,
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Tuple[torch.Tensor]]]:
         if isinstance(past_key_value, StaticCache):
             raise ValueError(
@@ -539,9 +495,7 @@ class WhisperFlashAttention2(WhisperAttention):
             )
         # WhisperFlashAttention2 attention does not support output_attentions
         if output_attentions:
-            raise ValueError(
-                "WhisperFlashAttention2 attention does not support output_attentions"
-            )
+            raise ValueError("WhisperFlashAttention2 attention does not support output_attentions")
 
         # if key_value_states are provided this layer is used as a cross-attention layer
         # for the decoder
@@ -549,9 +503,7 @@ class WhisperFlashAttention2(WhisperAttention):
         bsz, tgt_len, _ = hidden_states.size()
 
         # get query proj
-        query_states = torch.reshape(
-            self.q_proj(hidden_states), (bsz, tgt_len, self.num_heads, self.head_dim)
-        )
+        query_states = torch.reshape(self.q_proj(hidden_states), (bsz, tgt_len, self.num_heads, self.head_dim))
 
         if past_key_value is not None:
             is_updated = past_key_value.is_updated.get(self.layer_idx)
@@ -563,9 +515,7 @@ class WhisperFlashAttention2(WhisperAttention):
                 past_key_value = past_key_value.self_attention_cache
 
         # use key_value_states if cross attention
-        current_states = (
-            key_value_states if key_value_states is not None else hidden_states
-        )
+        current_states = key_value_states if key_value_states is not None else hidden_states
         if is_cross_attention and past_key_value and is_updated:
             # reuse k,v, cross_attentions
             key_states = past_key_value.key_cache[self.layer_idx]
@@ -577,10 +527,7 @@ class WhisperFlashAttention2(WhisperAttention):
                 # save all key/value_states to cache to be re-used for fast auto-regressive generation
                 cache_position = cache_position if not is_cross_attention else None
                 key_states, value_states = past_key_value.update(
-                    key_states,
-                    value_states,
-                    self.layer_idx,
-                    {"cache_position": cache_position},
+                    key_states, value_states, self.layer_idx, {"cache_position": cache_position}
                 )
 
         # TODO: These transpose are quite inefficient but Flash Attention requires the layout [batch_size, sequence_length, num_heads, head_dim]
@@ -640,14 +587,14 @@ class WhisperFlashAttention2(WhisperAttention):
 
 class WhisperSdpaAttention(WhisperAttention):
     def forward(
-        self,
-        hidden_states: torch.Tensor,
-        key_value_states: Optional[torch.Tensor] = None,
-        past_key_value: Optional[EncoderDecoderCache] = None,
-        attention_mask: Optional[torch.Tensor] = None,
-        layer_head_mask: Optional[torch.Tensor] = None,
-        output_attentions: bool = False,
-        cache_position: Optional[torch.LongTensor] = None,
+            self,
+            hidden_states: torch.Tensor,
+            key_value_states: Optional[torch.Tensor] = None,
+            past_key_value: Optional[EncoderDecoderCache] = None,
+            attention_mask: Optional[torch.Tensor] = None,
+            layer_head_mask: Optional[torch.Tensor] = None,
+            output_attentions: bool = False,
+            cache_position: Optional[torch.LongTensor] = None,
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Tuple[torch.Tensor]]]:
         """Input shape: Batch x Time x Channel"""
         if output_attentions or layer_head_mask is not None:
@@ -684,9 +631,7 @@ class WhisperSdpaAttention(WhisperAttention):
                 past_key_value = past_key_value.self_attention_cache
 
         # use key_value_states if cross attention
-        current_states = (
-            key_value_states if key_value_states is not None else hidden_states
-        )
+        current_states = key_value_states if key_value_states is not None else hidden_states
         if is_cross_attention and past_key_value and is_updated:
             # reuse k,v, cross_attentions
             key_states = past_key_value.key_cache[self.layer_idx]
@@ -698,10 +643,7 @@ class WhisperSdpaAttention(WhisperAttention):
                 # save all key/value_states to cache to be re-used for fast auto-regressive generation
                 cache_position = cache_position if not is_cross_attention else None
                 key_states, value_states = past_key_value.update(
-                    key_states,
-                    value_states,
-                    self.layer_idx,
-                    {"cache_position": cache_position},
+                    key_states, value_states, self.layer_idx, {"cache_position": cache_position}
                 )
 
         causal_mask = attention_mask
@@ -711,9 +653,7 @@ class WhisperSdpaAttention(WhisperAttention):
         # We dispatch to SDPA's Flash Attention or Efficient kernels via this `is_causal` if statement instead of an inline conditional assignment
         # in SDPA to support both torch.compile's dynamic shapes and full graph options. An inline conditional prevents dynamic shapes from compiling.
         # The tgt_len > 1 is necessary to match with AttentionMaskConverter.to_causal_4d that does not create a causal mask in case tgt_len == 1.
-        is_causal = (
-            True if self.is_causal and causal_mask is None and tgt_len > 1 else False
-        )
+        is_causal = True if self.is_causal and causal_mask is None and tgt_len > 1 else False
 
         # NOTE: SDPA with memory-efficient backend is currently (torch==2.1.2) bugged when using non-contiguous inputs and a custom attn_mask,
         # but we are fine here as `_shape` do call `.contiguous()`. Reference: https://github.com/pytorch/pytorch/issues/112577
@@ -761,13 +701,11 @@ class WhisperVQEncoderLayer(nn.Module):
             num_heads=config.encoder_attention_heads,
             dropout=config.attention_dropout,
             config=config,
-            is_causal=is_causal,
+            is_causal=is_causal
         )
         self.is_causal = is_causal
         if self.is_causal:
-            assert isinstance(
-                self.self_attn, WhisperSdpaAttention
-            ), "Causal attention is only supported for SDPA"
+            assert isinstance(self.self_attn, WhisperSdpaAttention), "Causal attention is only supported for SDPA"
         self.self_attn_layer_norm = nn.LayerNorm(self.embed_dim)
         self.dropout = config.dropout
         self.activation_fn = ACT2FN[config.activation_function]
@@ -777,11 +715,11 @@ class WhisperVQEncoderLayer(nn.Module):
         self.final_layer_norm = nn.LayerNorm(self.embed_dim)
 
     def forward(
-        self,
-        hidden_states: torch.Tensor,
-        attention_mask: torch.Tensor,
-        layer_head_mask: torch.Tensor,
-        output_attentions: bool = False,
+            self,
+            hidden_states: torch.Tensor,
+            attention_mask: torch.Tensor,
+            layer_head_mask: torch.Tensor,
+            output_attentions: bool = False,
     ) -> torch.Tensor:
         """
         Args:
@@ -802,30 +740,22 @@ class WhisperVQEncoderLayer(nn.Module):
             layer_head_mask=layer_head_mask,
             output_attentions=output_attentions,
         )
-        hidden_states = nn.functional.dropout(
-            hidden_states, p=self.dropout, training=self.training
-        )
+        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
 
         residual = hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = nn.functional.dropout(
-            hidden_states, p=self.activation_dropout, training=self.training
-        )
+        hidden_states = nn.functional.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = nn.functional.dropout(
-            hidden_states, p=self.dropout, training=self.training
-        )
+        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
 
         if hidden_states.dtype == torch.float16 and (
-            torch.isinf(hidden_states).any() or torch.isnan(hidden_states).any()
+                torch.isinf(hidden_states).any() or torch.isnan(hidden_states).any()
         ):
             clamp_value = torch.finfo(hidden_states.dtype).max - 1000
-            hidden_states = torch.clamp(
-                hidden_states, min=-clamp_value, max=clamp_value
-            )
+            hidden_states = torch.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
         outputs = (hidden_states,)
 
@@ -868,17 +798,17 @@ class WhisperDecoderLayer(nn.Module):
         self.final_layer_norm = nn.LayerNorm(self.embed_dim)
 
     def forward(
-        self,
-        hidden_states: torch.Tensor,
-        attention_mask: Optional[torch.Tensor] = None,
-        encoder_hidden_states: Optional[torch.Tensor] = None,
-        encoder_attention_mask: Optional[torch.Tensor] = None,
-        layer_head_mask: Optional[torch.Tensor] = None,
-        cross_attn_layer_head_mask: Optional[torch.Tensor] = None,
-        past_key_value: Optional[EncoderDecoderCache] = None,
-        output_attentions: Optional[bool] = False,
-        use_cache: Optional[bool] = True,
-        cache_position: Optional[torch.LongTensor] = None,
+            self,
+            hidden_states: torch.Tensor,
+            attention_mask: Optional[torch.Tensor] = None,
+            encoder_hidden_states: Optional[torch.Tensor] = None,
+            encoder_attention_mask: Optional[torch.Tensor] = None,
+            layer_head_mask: Optional[torch.Tensor] = None,
+            cross_attn_layer_head_mask: Optional[torch.Tensor] = None,
+            past_key_value: Optional[EncoderDecoderCache] = None,
+            output_attentions: Optional[bool] = False,
+            use_cache: Optional[bool] = True,
+            cache_position: Optional[torch.LongTensor] = None,
     ) -> torch.Tensor:
         """
         Args:
@@ -910,9 +840,7 @@ class WhisperDecoderLayer(nn.Module):
             output_attentions=output_attentions,
             cache_position=cache_position,
         )
-        hidden_states = nn.functional.dropout(
-            hidden_states, p=self.dropout, training=self.training
-        )
+        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
 
         # Cross-Attention Block
@@ -920,19 +848,15 @@ class WhisperDecoderLayer(nn.Module):
         if encoder_hidden_states is not None:
             residual = hidden_states
             hidden_states = self.encoder_attn_layer_norm(hidden_states)
-            hidden_states, cross_attn_weights, cross_attn_present_key_value = (
-                self.encoder_attn(
-                    hidden_states=hidden_states,
-                    key_value_states=encoder_hidden_states,
-                    attention_mask=encoder_attention_mask,
-                    layer_head_mask=cross_attn_layer_head_mask,
-                    past_key_value=past_key_value,
-                    output_attentions=output_attentions,
-                )
+            hidden_states, cross_attn_weights, cross_attn_present_key_value = self.encoder_attn(
+                hidden_states=hidden_states,
+                key_value_states=encoder_hidden_states,
+                attention_mask=encoder_attention_mask,
+                layer_head_mask=cross_attn_layer_head_mask,
+                past_key_value=past_key_value,
+                output_attentions=output_attentions,
             )
-            hidden_states = nn.functional.dropout(
-                hidden_states, p=self.dropout, training=self.training
-            )
+            hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
             hidden_states = residual + hidden_states
 
             # add cross-attn to positions 1 of present_key_value tuple
@@ -942,13 +866,9 @@ class WhisperDecoderLayer(nn.Module):
         residual = hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = nn.functional.dropout(
-            hidden_states, p=self.activation_dropout, training=self.training
-        )
+        hidden_states = nn.functional.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = nn.functional.dropout(
-            hidden_states, p=self.dropout, training=self.training
-        )
+        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
 
         outputs = (hidden_states,)
@@ -1158,37 +1078,18 @@ class WhisperVQEncoder(WhisperPreTrainedModel):
         else:
             conv_class = nn.Conv1d
         self.conv1 = conv_class(self.num_mel_bins, embed_dim, kernel_size=3, padding=1)
-        self.conv2 = conv_class(
-            embed_dim, embed_dim, kernel_size=3, stride=2, padding=1
-        )
+        self.conv2 = conv_class(embed_dim, embed_dim, kernel_size=3, stride=2, padding=1)
 
         self.embed_positions = nn.Embedding(self.max_source_positions, embed_dim)
         self.embed_positions.requires_grad_(False)
         if config.quantize_encoder_only:
-            self.layers = nn.ModuleList(
-                [
-                    WhisperVQEncoderLayer(
-                        config,
-                        is_causal=config.encoder_causal_attention
-                        or config.quantize_causal_encoder,
-                    )
-                    for _ in range(config.quantize_position)
-                ]
-            )
+            self.layers = nn.ModuleList([WhisperVQEncoderLayer(config,
+                                                               is_causal=config.encoder_causal_attention or config.quantize_causal_encoder)
+                                         for _ in range(config.quantize_position)])
         else:
-            self.layers = nn.ModuleList(
-                [
-                    WhisperVQEncoderLayer(
-                        config,
-                        is_causal=config.encoder_causal_attention
-                        or (
-                            config.quantize_causal_encoder
-                            and layer_id < config.quantize_position
-                        ),
-                    )
-                    for layer_id in range(config.encoder_layers)
-                ]
-            )
+            self.layers = nn.ModuleList([WhisperVQEncoderLayer(config, is_causal=config.encoder_causal_attention or (
+                        config.quantize_causal_encoder and layer_id < config.quantize_position)) for layer_id in
+                                         range(config.encoder_layers)])
             self.layer_norm = nn.LayerNorm(config.d_model)
 
         self.gradient_checkpointing = False
@@ -1211,48 +1112,29 @@ class WhisperVQEncoder(WhisperPreTrainedModel):
     def init_pooling_layer(self, config: WhisperVQConfig):
         if config.pooling_kernel_size is not None:
             if config.pooling_type == "max":
-                self.pooling_layer = nn.MaxPool1d(
-                    kernel_size=config.pooling_kernel_size
-                )
+                self.pooling_layer = nn.MaxPool1d(kernel_size=config.pooling_kernel_size)
             elif config.pooling_type == "avg":
-                self.pooling_layer = nn.AvgPool1d(
-                    kernel_size=config.pooling_kernel_size
-                )
+                self.pooling_layer = nn.AvgPool1d(kernel_size=config.pooling_kernel_size)
             else:
-                raise NotImplementedError(
-                    f"Pooling type {config.pooling_type} not implemented"
-                )
+                raise NotImplementedError(f"Pooling type {config.pooling_type} not implemented")
 
     def init_quantize_layer(self, config: WhisperVQConfig, quantize_load_codebook=None):
         if config.quantize_vocab_size is not None:
             if config.pooling_position is not None:
                 assert config.quantize_position >= config.pooling_position
-            self.codebook = nn.Embedding(
-                config.quantize_vocab_size, self.config.d_model
-            )
+            self.codebook = nn.Embedding(config.quantize_vocab_size, self.config.d_model)
             if quantize_load_codebook is not None:
                 init_codes = np.load(quantize_load_codebook)
                 self.codebook.weight.data.copy_(torch.from_numpy(init_codes))
             max_source_positions = self.max_source_positions
             if config.pooling_kernel_size is not None:
-                max_source_positions = math.ceil(
-                    max_source_positions / self.config.pooling_kernel_size
-                )
-            self.embed_positions2 = nn.Embedding(
-                max_source_positions, self.config.d_model
-            )
-            self.embed_positions2.weight.data.copy_(
-                self.embed_positions.weight.data[:max_source_positions]
-            )
+                max_source_positions = math.ceil(max_source_positions / self.config.pooling_kernel_size)
+            self.embed_positions2 = nn.Embedding(max_source_positions, self.config.d_model)
+            self.embed_positions2.weight.data.copy_(self.embed_positions.weight.data[:max_source_positions])
             if config.quantize_ema_decay is not None:
                 self.codebook.weight.requires_grad = False
-                self.register_buffer(
-                    "ema_count",
-                    torch.ones(config.quantize_vocab_size, dtype=torch.float),
-                )
-                self.register_buffer(
-                    "ema_weight", self.codebook.weight.data.clone().float()
-                )
+                self.register_buffer("ema_count", torch.ones(config.quantize_vocab_size, dtype=torch.float))
+                self.register_buffer("ema_weight", self.codebook.weight.data.clone().float())
 
     def _freeze_parameters(self):
         for param in self.parameters():
@@ -1269,14 +1151,7 @@ class WhisperVQEncoder(WhisperPreTrainedModel):
         dtype = self.dtype
         batch_size, seq_length = attention_mask.shape
         causal_mask = torch.torch.tril(
-            torch.ones(
-                1,
-                seq_length,
-                seq_length,
-                dtype=torch.bool,
-                device=attention_mask.device,
-            )
-        )
+            torch.ones(1, seq_length, seq_length, dtype=torch.bool, device=attention_mask.device))
         block_square_mask = []
         for start in range(0, seq_length, block_size):
             end = min(start + block_size, seq_length)
@@ -1291,14 +1166,14 @@ class WhisperVQEncoder(WhisperPreTrainedModel):
         return block_causal_mask
 
     def forward(
-        self,
-        input_features,
-        attention_mask=None,
-        head_mask=None,
-        output_attentions=None,
-        output_hidden_states=None,
-        return_dict=None,
-        quantized_token_ids=None,
+            self,
+            input_features,
+            attention_mask=None,
+            head_mask=None,
+            output_attentions=None,
+            output_hidden_states=None,
+            return_dict=None,
+            quantized_token_ids=None
     ):
         r"""
         Args:
@@ -1335,30 +1210,17 @@ class WhisperVQEncoder(WhisperPreTrainedModel):
         batch_size, feature_size, seq_length = input_features.shape
         seq_length = seq_length // (self.conv1.stride[0] * self.conv2.stride[0])
 
-        attention_mask = attention_mask[
-            :, :: self.conv1.stride[0] * self.conv2.stride[0]
-        ]
+        attention_mask = attention_mask[:, :: self.conv1.stride[0] * self.conv2.stride[0]]
         if self.config.quantize_causal_block_size is not None:
-            extended_attention_mask = self.get_block_causal_attention_mask(
-                attention_mask, block_size=self.config.quantize_causal_block_size
-            )
+            extended_attention_mask = self.get_block_causal_attention_mask(attention_mask,
+                                                                           block_size=self.config.quantize_causal_block_size)
         else:
-            extended_attention_mask = self.get_extended_attention_mask(
-                attention_mask, (batch_size, seq_length)
-            )
-        output_attentions = (
-            output_attentions
-            if output_attentions is not None
-            else self.config.output_attentions
-        )
+            extended_attention_mask = self.get_extended_attention_mask(attention_mask, (batch_size, seq_length))
+        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
-            output_hidden_states
-            if output_hidden_states is not None
-            else self.config.output_hidden_states
+            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
-        return_dict = (
-            return_dict if return_dict is not None else self.config.use_return_dict
-        )
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         inputs_embeds = nn.functional.gelu(self.conv1(input_features))
         inputs_embeds = nn.functional.gelu(self.conv2(inputs_embeds))
 
@@ -1366,9 +1228,7 @@ class WhisperVQEncoder(WhisperPreTrainedModel):
         embed_pos = self.embed_positions.weight
 
         hidden_states = inputs_embeds + embed_pos[:seq_length]
-        hidden_states = nn.functional.dropout(
-            hidden_states, p=self.dropout, training=self.training
-        )
+        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
 
         encoder_states = () if output_hidden_states else None
         all_attentions = () if output_attentions else None
@@ -1404,9 +1264,7 @@ class WhisperVQEncoder(WhisperPreTrainedModel):
                     layer_outputs = encoder_layer(
                         hidden_states,
                         extended_attention_mask,
-                        layer_head_mask=(
-                            head_mask[idx] if head_mask is not None else None
-                        ),
+                        layer_head_mask=(head_mask[idx] if head_mask is not None else None),
                         output_attentions=output_attentions,
                     )
 
@@ -1414,230 +1272,110 @@ class WhisperVQEncoder(WhisperPreTrainedModel):
 
             if output_attentions:
                 all_attentions = all_attentions + (layer_outputs[1],)
-            if (
-                idx + 1 == self.config.pooling_position
-                and self.config.pooling_kernel_size is not None
-            ):
+            if idx + 1 == self.config.pooling_position and self.config.pooling_kernel_size is not None:
                 hidden_states = hidden_states.permute(0, 2, 1)
                 if hidden_states.shape[-1] % self.config.pooling_kernel_size != 0:
-                    hidden_states = torch.nn.functional.pad(
-                        hidden_states,
-                        (
-                            0,
-                            self.config.pooling_kernel_size
-                            - hidden_states.shape[-1] % self.config.pooling_kernel_size,
-                        ),
-                    )
+                    hidden_states = torch.nn.functional.pad(hidden_states, (
+                    0, self.config.pooling_kernel_size - hidden_states.shape[-1] % self.config.pooling_kernel_size))
                 hidden_states = self.pooling_layer(hidden_states).permute(0, 2, 1)
-                attention_mask = attention_mask[:, :: self.config.pooling_kernel_size]
+                attention_mask = attention_mask[:, ::self.config.pooling_kernel_size]
                 if self.config.quantize_causal_block_size is not None:
-                    extended_attention_mask = self.get_block_causal_attention_mask(
-                        attention_mask,
-                        block_size=self.config.quantize_causal_block_size
-                        // self.config.pooling_kernel_size,
-                    )
+                    extended_attention_mask = self.get_block_causal_attention_mask(attention_mask, block_size=self.config.quantize_causal_block_size // self.config.pooling_kernel_size)
                 else:
-                    extended_attention_mask = self.get_extended_attention_mask(
-                        attention_mask,
-                        (batch_size, seq_length // self.config.pooling_kernel_size),
-                    )
+                    extended_attention_mask = self.get_extended_attention_mask(attention_mask, (
+                    batch_size, seq_length // self.config.pooling_kernel_size))
 
-            if (
-                idx + 1 == self.config.quantize_position
-                and self.config.quantize_vocab_size is not None
-            ):
+            if idx + 1 == self.config.quantize_position and self.config.quantize_vocab_size is not None:
                 if quantized_token_ids is not None:
                     hidden_states = self.codebook(quantized_token_ids)
                 else:
-                    hidden_quantized, indices_flat, distances = vector_quantize(
-                        hidden_states, self.codebook.weight
-                    )
-                    quantized_token_ids = indices_flat.reshape(
-                        batch_size, hidden_quantized.shape[1]
-                    )
+                    hidden_quantized, indices_flat, distances = vector_quantize(hidden_states, self.codebook.weight)
+                    quantized_token_ids = indices_flat.reshape(batch_size, hidden_quantized.shape[1])
                     if self.training:
-                        encodings = torch.nn.functional.one_hot(
-                            indices_flat, self.config.quantize_vocab_size
-                        ).float()
+                        encodings = torch.nn.functional.one_hot(indices_flat, self.config.quantize_vocab_size).float()
                         encodings = encodings * attention_mask.reshape(-1, 1)
                         n = torch.sum(encodings, dim=0)
-                        torch.distributed.all_reduce(
-                            n, op=torch.distributed.ReduceOp.SUM
-                        )
+                        torch.distributed.all_reduce(n, op=torch.distributed.ReduceOp.SUM)
                         self.num_active_codes = n.nonzero().shape[0]
                         if self.config.quantize_ema_decay:
-                            hidden_flat = (
-                                hidden_states.detach()
-                                .float()
-                                .reshape(-1, hidden_states.shape[-1])
-                            )
-                            with torch.autocast(
-                                device_type="cuda", dtype=torch.float32
-                            ):
+                            hidden_flat = hidden_states.detach().float().reshape(-1, hidden_states.shape[-1])
+                            with torch.autocast(device_type='cuda', dtype=torch.float32):
                                 dw = torch.matmul(encodings.t(), hidden_flat)
-                            torch.distributed.all_reduce(
-                                dw, op=torch.distributed.ReduceOp.SUM
-                            )
-                            self.ema_count = (
-                                self.ema_count * self.config.quantize_ema_decay
-                                + (1 - self.config.quantize_ema_decay) * n
-                            )
+                            torch.distributed.all_reduce(dw, op=torch.distributed.ReduceOp.SUM)
+                            self.ema_count = self.ema_count * self.config.quantize_ema_decay + (
+                                    1 - self.config.quantize_ema_decay) * n
                             total_count = torch.sum(self.ema_count)
-                            self.ema_count = (
-                                (self.ema_count + 1e-5)
-                                / (total_count + self.config.quantize_vocab_size * 1e-5)
-                                * total_count
-                            )
-                            self.ema_weight = (
-                                self.ema_weight * self.config.quantize_ema_decay
-                                + (1 - self.config.quantize_ema_decay) * dw
-                            )
-                            self.codebook.weight.data = (
-                                self.ema_weight / self.ema_count.unsqueeze(1)
-                            )
-                            self.quantize_loss = (
-                                self.config.quantize_loss_scale
-                                * self.config.quantize_commit_coefficient
-                                * mse_loss_with_mask(
-                                    hidden_states,
-                                    hidden_quantized.detach(),
-                                    attention_mask,
-                                )
-                            )
+                            self.ema_count = (self.ema_count + 1e-5) / (
+                                    total_count + self.config.quantize_vocab_size * 1e-5) * total_count
+                            self.ema_weight = self.ema_weight * self.config.quantize_ema_decay + (
+                                    1 - self.config.quantize_ema_decay) * dw
+                            self.codebook.weight.data = self.ema_weight / self.ema_count.unsqueeze(1)
+                            self.quantize_loss = self.config.quantize_loss_scale * self.config.quantize_commit_coefficient * mse_loss_with_mask(
+                                hidden_states, hidden_quantized.detach(), attention_mask)
                             self.quantize_ema_count += 1
-                            if (
-                                self.config.quantize_restart_interval is not None
-                                and self.quantize_ema_count
-                                % self.config.quantize_restart_interval
-                                == 0
-                            ):
-                                rank, world_size = (
-                                    torch.distributed.get_rank(),
-                                    torch.distributed.get_world_size(),
-                                )
-                                segment_vocab_size = (
-                                    self.config.quantize_vocab_size // world_size
-                                )
+                            if self.config.quantize_restart_interval is not None and self.quantize_ema_count % self.config.quantize_restart_interval == 0:
+                                rank, world_size = torch.distributed.get_rank(), torch.distributed.get_world_size()
+                                segment_vocab_size = self.config.quantize_vocab_size // world_size
                                 start_idx = segment_vocab_size * rank
-                                ema_count_segment = self.ema_count[
-                                    start_idx : start_idx + segment_vocab_size
-                                ]
+                                ema_count_segment = self.ema_count[start_idx: start_idx + segment_vocab_size]
                                 threshold = 1 * (
-                                    self.config.quantize_ema_decay
-                                    ** self.config.quantize_restart_interval
-                                )
-                                update_indices = (
-                                    ema_count_segment < threshold
-                                ).nonzero()[:, 0] + start_idx
+                                            self.config.quantize_ema_decay ** self.config.quantize_restart_interval)
+                                update_indices = (ema_count_segment < threshold).nonzero()[:, 0] + start_idx
                                 num_update = update_indices.shape[0]
                                 mask_flat = attention_mask.reshape(-1) > 0
                                 hidden_selected = hidden_flat[mask_flat]
-                                hidden_update = hidden_selected[
-                                    random.sample(
-                                        range(len(hidden_selected)), num_update
-                                    )
-                                ]
-                                num_update = torch.as_tensor(
-                                    [num_update],
-                                    dtype=torch.long,
-                                    device=hidden_states.device,
-                                )
-                                num_update_list = [
-                                    torch.as_tensor(
-                                        [0],
-                                        dtype=torch.long,
-                                        device=hidden_states.device,
-                                    )
-                                    for _ in range(world_size)
-                                ]
-                                torch.distributed.all_gather(
-                                    num_update_list, num_update
-                                )
+                                hidden_update = hidden_selected[random.sample(range(len(hidden_selected)), num_update)]
+                                num_update = torch.as_tensor([num_update], dtype=torch.long,
+                                                             device=hidden_states.device)
+                                num_update_list = [torch.as_tensor([0], dtype=torch.long, device=hidden_states.device)
+                                                   for _
+                                                   in range(world_size)]
+                                torch.distributed.all_gather(num_update_list, num_update)
                                 update_indices_list = [
-                                    torch.zeros(
-                                        num.item(),
-                                        dtype=torch.long,
-                                        device=hidden_states.device,
-                                    )
-                                    for num in num_update_list
-                                ]
-                                torch.distributed.all_gather(
-                                    update_indices_list, update_indices
-                                )
+                                    torch.zeros(num.item(), dtype=torch.long, device=hidden_states.device) for num in
+                                    num_update_list]
+                                torch.distributed.all_gather(update_indices_list, update_indices)
                                 update_indices = torch.cat(update_indices_list)
                                 hidden_update_list = [
-                                    torch.zeros(
-                                        num.item(),
-                                        hidden_flat.shape[-1],
-                                        dtype=hidden_update.dtype,
-                                        device=hidden_states.device,
-                                    )
-                                    for num in num_update_list
-                                ]
-                                torch.distributed.all_gather(
-                                    hidden_update_list, hidden_update
-                                )
+                                    torch.zeros(num.item(), hidden_flat.shape[-1], dtype=hidden_update.dtype,
+                                                device=hidden_states.device) for num in num_update_list]
+                                torch.distributed.all_gather(hidden_update_list, hidden_update)
                                 hidden_update = torch.cat(hidden_update_list)
-                                self.codebook.weight.data[update_indices] = (
-                                    hidden_update
-                                )
+                                self.codebook.weight.data[update_indices] = hidden_update
                                 self.ema_count[update_indices] = 1
                                 self.ema_weight[update_indices] = hidden_update
                                 if torch.distributed.get_rank() == 0:
                                     print(f"restart {len(update_indices)} tokens")
                         else:
                             loss = self.config.quantize_loss_scale * (
-                                self.config.quantize_commit_coefficient
-                                * mse_loss_with_mask(
-                                    hidden_states,
-                                    hidden_quantized.detach(),
-                                    attention_mask,
-                                )
-                                + mse_loss_with_mask(
-                                    hidden_quantized,
-                                    hidden_states.detach(),
-                                    attention_mask,
-                                )
-                            )
+                                    self.config.quantize_commit_coefficient * mse_loss_with_mask(hidden_states,
+                                                                                                 hidden_quantized.detach(),
+                                                                                                 attention_mask) + mse_loss_with_mask(
+                                hidden_quantized, hidden_states.detach(), attention_mask))
                             self.quantize_loss = loss
-                        hidden_states = (
-                            hidden_states + (hidden_quantized - hidden_states).detach()
-                        )
+                        hidden_states = hidden_states + (hidden_quantized - hidden_states).detach()
                     else:
                         hidden_states = hidden_quantized
-                hidden_states = (
-                    hidden_states
-                    + self.embed_positions2.weight[: hidden_states.shape[1]]
-                )
+                hidden_states = hidden_states + self.embed_positions2.weight[:hidden_states.shape[1]]
 
             if idx + 1 == self.save_hidden_position:
                 import numpy as np
                 import uuid
-
                 to_save = []
                 for batch_idx, hidden_state in enumerate(hidden_states):
                     for seq_idx, hidden in enumerate(hidden_state):
                         if attention_mask[batch_idx, seq_idx]:
                             to_save.append(hidden.detach().cpu().numpy())
-                np.save(
-                    os.path.join(self.save_hidden_dir, f"{str(uuid.uuid4())}.npy"),
-                    to_save,
-                )
+                np.save(os.path.join(self.save_hidden_dir, f"{str(uuid.uuid4())}.npy"), to_save)
         if not self.config.quantize_encoder_only:
             hidden_states = self.layer_norm(hidden_states)
         if output_hidden_states:
             encoder_states = encoder_states + (hidden_states,)
 
         if not return_dict:
-            return tuple(
-                v
-                for v in [hidden_states, encoder_states, all_attentions]
-                if v is not None
-            )
+            return tuple(v for v in [hidden_states, encoder_states, all_attentions] if v is not None)
         return QuantizedBaseModelOutput(
-            last_hidden_state=hidden_states,
-            hidden_states=encoder_states,
-            attentions=all_attentions,
+            last_hidden_state=hidden_states, hidden_states=encoder_states, attentions=all_attentions,
             quantized_token_ids=quantized_token_ids,
         )
 
@@ -1661,18 +1399,11 @@ class WhisperVQDecoder(WhisperPreTrainedModel):
         self.max_source_positions = config.max_source_positions
         self.embed_scale = math.sqrt(config.d_model) if config.scale_embedding else 1.0
 
-        self.embed_tokens = nn.Embedding(
-            config.vocab_size, config.d_model, self.padding_idx
-        )
-        self.embed_positions = WhisperPositionalEmbedding(
-            self.max_target_positions, config.d_model
-        )
+        self.embed_tokens = nn.Embedding(config.vocab_size, config.d_model, self.padding_idx)
+        self.embed_positions = WhisperPositionalEmbedding(self.max_target_positions, config.d_model)
 
         self.layers = nn.ModuleList(
-            [
-                WhisperDecoderLayer(config, layer_idx)
-                for layer_idx in range(config.decoder_layers)
-            ]
+            [WhisperDecoderLayer(config, layer_idx) for layer_idx in range(config.decoder_layers)]
         )
         self._use_flash_attention_2 = config._attn_implementation == "flash_attention_2"
         self._use_sdpa = config._attn_implementation == "sdpa"
@@ -1690,21 +1421,21 @@ class WhisperVQDecoder(WhisperPreTrainedModel):
         self.embed_tokens = value
 
     def forward(
-        self,
-        input_ids=None,
-        attention_mask=None,
-        encoder_hidden_states=None,
-        encoder_attention_mask=None,
-        head_mask=None,
-        cross_attn_head_mask=None,
-        past_key_values=None,
-        inputs_embeds=None,
-        position_ids=None,
-        use_cache=None,
-        output_attentions=None,
-        output_hidden_states=None,
-        return_dict=None,
-        cache_position=None,
+            self,
+            input_ids=None,
+            attention_mask=None,
+            encoder_hidden_states=None,
+            encoder_attention_mask=None,
+            head_mask=None,
+            cross_attn_head_mask=None,
+            past_key_values=None,
+            inputs_embeds=None,
+            position_ids=None,
+            use_cache=None,
+            output_attentions=None,
+            output_hidden_states=None,
+            return_dict=None,
+            cache_position=None,
     ):
         r"""
         Args:
@@ -1772,49 +1503,33 @@ class WhisperVQDecoder(WhisperPreTrainedModel):
                 Indices depicting the position of the input sequence tokens in the sequence. It is used to update the
                 cache in the correct position and to infer the complete sequence length.
         """
-        output_attentions = (
-            output_attentions
-            if output_attentions is not None
-            else self.config.output_attentions
-        )
+        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
-            output_hidden_states
-            if output_hidden_states is not None
-            else self.config.output_hidden_states
+            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
         use_cache = use_cache if use_cache is not None else self.config.use_cache
-        return_dict = (
-            return_dict if return_dict is not None else self.config.use_return_dict
-        )
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         # retrieve input_ids and inputs_embeds
         if input_ids is not None and inputs_embeds is not None:
-            raise ValueError(
-                "You cannot specify both decoder_input_ids and decoder_inputs_embeds at the same time"
-            )
+            raise ValueError("You cannot specify both decoder_input_ids and decoder_inputs_embeds at the same time")
         elif input_ids is not None:
             input_shape = input_ids.size()
             input_ids = input_ids.view(-1, input_shape[-1])
         elif inputs_embeds is not None:
             input_shape = inputs_embeds.size()[:-1]
         else:
-            raise ValueError(
-                "You have to specify either decoder_input_ids or decoder_inputs_embeds"
-            )
+            raise ValueError("You have to specify either decoder_input_ids or decoder_inputs_embeds")
 
         if inputs_embeds is None:
             inputs_embeds = self.embed_tokens(input_ids)
         assert encoder_attention_mask.shape[-1] == encoder_hidden_states.shape[1]
-        encoder_extended_attention_mask = self.invert_attention_mask(
-            encoder_attention_mask
-        )
+        encoder_extended_attention_mask = self.invert_attention_mask(encoder_attention_mask)
 
         return_legacy_cache = False
         return_self_attention_cache = False
         if use_cache or past_key_values is not None:
-            if isinstance(past_key_values, Cache) and not isinstance(
-                past_key_values, EncoderDecoderCache
-            ):
+            if isinstance(past_key_values, Cache) and not isinstance(past_key_values, EncoderDecoderCache):
                 return_self_attention_cache = True
                 past_key_values = EncoderDecoderCache(past_key_values, DynamicCache())
             elif not isinstance(past_key_values, EncoderDecoderCache):
@@ -1834,9 +1549,7 @@ class WhisperVQDecoder(WhisperPreTrainedModel):
 
         if cache_position is None:
             cache_position = torch.arange(
-                past_key_values_length,
-                past_key_values_length + input_shape[1],
-                device=inputs_embeds.device,
+                past_key_values_length, past_key_values_length + input_shape[1], device=inputs_embeds.device
             )
 
         if position_ids is None:
@@ -1845,31 +1558,21 @@ class WhisperVQDecoder(WhisperPreTrainedModel):
         # embed positions
         if input_ids is not None:
             positions = self.embed_positions(
-                input_ids,
-                past_key_values_length=past_key_values_length,
-                position_ids=position_ids,
+                input_ids, past_key_values_length=past_key_values_length, position_ids=position_ids
             )
         else:
             positions = self.embed_positions(
-                inputs_embeds,
-                past_key_values_length=past_key_values_length,
-                position_ids=position_ids,
+                inputs_embeds, past_key_values_length=past_key_values_length, position_ids=position_ids
             )
 
         hidden_states = inputs_embeds + positions.to(inputs_embeds.device)
-        hidden_states = nn.functional.dropout(
-            hidden_states, p=self.dropout, training=self.training
-        )
+        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
 
         causal_mask = self._update_causal_mask(
             attention_mask,
             inputs_embeds,
             cache_position,
-            (
-                past_key_values.self_attention_cache
-                if past_key_values is not None
-                else None
-            ),
+            past_key_values.self_attention_cache if past_key_values is not None else None,
             output_attentions,
         )
 
@@ -1882,14 +1585,10 @@ class WhisperVQDecoder(WhisperPreTrainedModel):
         # decoder layers
         all_hidden_states = () if output_hidden_states else None
         all_self_attns = () if output_attentions else None
-        all_cross_attentions = (
-            () if (output_attentions and encoder_hidden_states is not None) else None
-        )
+        all_cross_attentions = () if (output_attentions and encoder_hidden_states is not None) else None
 
         # check if head_mask/cross_attn_head_mask has a correct number of layers specified if desired
-        for attn_mask, mask_name in zip(
-            [head_mask, cross_attn_head_mask], ["head_mask", "cross_attn_head_mask"]
-        ):
+        for attn_mask, mask_name in zip([head_mask, cross_attn_head_mask], ["head_mask", "cross_attn_head_mask"]):
             if attn_mask is not None:
                 assert attn_mask.size()[0] == (len(self.layers)), (
                     f"The `{mask_name}` should be specified for {len(self.layers)} layers, but it is for"
@@ -1912,11 +1611,7 @@ class WhisperVQDecoder(WhisperPreTrainedModel):
                     encoder_hidden_states,
                     encoder_extended_attention_mask,  # encoder attention mask
                     head_mask[idx] if head_mask is not None else None,
-                    (
-                        cross_attn_head_mask[idx]
-                        if cross_attn_head_mask is not None
-                        else None
-                    ),
+                    cross_attn_head_mask[idx] if cross_attn_head_mask is not None else None,
                     None,  # past_key_value
                     output_attentions,
                     use_cache,
@@ -1930,9 +1625,7 @@ class WhisperVQDecoder(WhisperPreTrainedModel):
                     encoder_attention_mask=encoder_extended_attention_mask,
                     layer_head_mask=(head_mask[idx] if head_mask is not None else None),
                     cross_attn_layer_head_mask=(
-                        cross_attn_head_mask[idx]
-                        if cross_attn_head_mask is not None
-                        else None
+                        cross_attn_head_mask[idx] if cross_attn_head_mask is not None else None
                     ),
                     past_key_value=past_key_values if use_cache else None,
                     output_attentions=output_attentions,
@@ -1960,13 +1653,7 @@ class WhisperVQDecoder(WhisperPreTrainedModel):
         if not return_dict:
             return tuple(
                 v
-                for v in [
-                    hidden_states,
-                    next_cache,
-                    all_hidden_states,
-                    all_self_attns,
-                    all_cross_attentions,
-                ]
+                for v in [hidden_states, next_cache, all_hidden_states, all_self_attns, all_cross_attentions]
                 if v is not None
             )
         return BaseModelOutputWithPastAndCrossAttentions(
@@ -1979,12 +1666,12 @@ class WhisperVQDecoder(WhisperPreTrainedModel):
 
     # Copied from transformers.models.llama.modeling_llama.LlamaModel._update_causal_mask
     def _update_causal_mask(
-        self,
-        attention_mask: torch.Tensor,
-        input_tensor: torch.Tensor,
-        cache_position: torch.Tensor,
-        past_key_values: Cache,
-        output_attentions: bool,
+            self,
+            attention_mask: torch.Tensor,
+            input_tensor: torch.Tensor,
+            cache_position: torch.Tensor,
+            past_key_values: Cache,
+            output_attentions: bool,
     ):
         # TODO: As of torch==2.2.0, the `attention_mask` passed to the model in `generate` is 2D and of dynamic length even when the static
         # KV cache is used. This is an issue for torch.compile which then recaptures cudagraphs at each decode steps due to the dynamic shapes.
@@ -1999,22 +1686,16 @@ class WhisperVQDecoder(WhisperPreTrainedModel):
         # For SDPA, when possible, we will rely on its `is_causal` argument instead of its `attn_mask` argument, in
         # order to dispatch on Flash Attention 2. This feature is not compatible with static cache, as SDPA will fail
         # to infer the attention mask.
-        past_seen_tokens = (
-            past_key_values.get_seq_length() if past_key_values is not None else 0
-        )
+        past_seen_tokens = past_key_values.get_seq_length() if past_key_values is not None else 0
         using_static_cache = isinstance(past_key_values, StaticCache)
 
         # When output attentions is True, sdpa implementation's forward method calls the eager implementation's forward
-        if (
-            self.config._attn_implementation == "sdpa"
-            and not using_static_cache
-            and not output_attentions
-        ):
+        if self.config._attn_implementation == "sdpa" and not using_static_cache and not output_attentions:
             if AttentionMaskConverter._ignore_causal_mask_sdpa(
-                attention_mask,
-                inputs_embeds=input_tensor,
-                past_key_values_length=past_seen_tokens,
-                is_training=self.training,
+                    attention_mask,
+                    inputs_embeds=input_tensor,
+                    past_key_values_length=past_seen_tokens,
+                    is_training=self.training,
             ):
                 return None
 
@@ -2043,17 +1724,15 @@ class WhisperVQDecoder(WhisperPreTrainedModel):
         )
 
         if (
-            self.config._attn_implementation == "sdpa"
-            and attention_mask is not None
-            and attention_mask.device.type == "cuda"
-            and not output_attentions
+                self.config._attn_implementation == "sdpa"
+                and attention_mask is not None
+                and attention_mask.device.type == "cuda"
+                and not output_attentions
         ):
             # Attend to all tokens in fully masked rows in the causal_mask, for example the relevant first rows when
             # using left padding. This is required by F.scaled_dot_product_attention memory-efficient attention path.
             # Details: https://github.com/pytorch/pytorch/issues/110213
-            causal_mask = AttentionMaskConverter._unmask_unattended(
-                causal_mask, min_dtype
-            )
+            causal_mask = AttentionMaskConverter._unmask_unattended(causal_mask, min_dtype)
 
         return causal_mask
 
@@ -2091,9 +1770,9 @@ class WhisperVQModel(WhisperPreTrainedModel):
         self.encoder._freeze_parameters()
 
     def _mask_input_features(
-        self,
-        input_features: torch.FloatTensor,
-        attention_mask: Optional[torch.LongTensor] = None,
+            self,
+            input_features: torch.FloatTensor,
+            attention_mask: Optional[torch.LongTensor] = None,
     ):
         """
         Masks extracted features along time axis and/or along feature axis according to
@@ -2116,9 +1795,7 @@ class WhisperVQModel(WhisperPreTrainedModel):
                 attention_mask=attention_mask,
                 min_masks=self.config.mask_time_min_masks,
             )
-            mask_time_indices = torch.tensor(
-                mask_time_indices, device=input_features.device, dtype=torch.bool
-            )
+            mask_time_indices = torch.tensor(mask_time_indices, device=input_features.device, dtype=torch.bool)
             mask_time_indices = mask_time_indices[:, None].expand(-1, hidden_size, -1)
             input_features[mask_time_indices] = 0
 
@@ -2130,38 +1807,32 @@ class WhisperVQModel(WhisperPreTrainedModel):
                 mask_length=self.config.mask_feature_length,
                 min_masks=self.config.mask_feature_min_masks,
             )
-            mask_feature_indices = torch.tensor(
-                mask_feature_indices, device=input_features.device, dtype=torch.bool
-            )
+            mask_feature_indices = torch.tensor(mask_feature_indices, device=input_features.device, dtype=torch.bool)
             input_features[mask_feature_indices] = 0
 
         return input_features
 
     @add_start_docstrings_to_model_forward(WHISPER_INPUTS_DOCSTRING)
-    @replace_return_docstrings(
-        output_type=Seq2SeqModelOutput, config_class=_CONFIG_FOR_DOC
-    )
+    @replace_return_docstrings(output_type=Seq2SeqModelOutput, config_class=_CONFIG_FOR_DOC)
     def forward(
-        self,
-        input_features: Optional[torch.FloatTensor] = None,
-        attention_mask: Optional[torch.LongTensor] = None,
-        decoder_input_ids: Optional[torch.LongTensor] = None,
-        decoder_attention_mask: Optional[torch.LongTensor] = None,
-        head_mask: Optional[torch.Tensor] = None,
-        decoder_head_mask: Optional[torch.Tensor] = None,
-        cross_attn_head_mask: Optional[torch.Tensor] = None,
-        encoder_outputs: Optional[Tuple[Tuple[torch.FloatTensor]]] = None,
-        past_key_values: Optional[
-            Union[EncoderDecoderCache, Tuple[torch.FloatTensor]]
-        ] = None,
-        decoder_inputs_embeds: Optional[Tuple[torch.FloatTensor]] = None,
-        decoder_position_ids: Optional[Tuple[torch.LongTensor]] = None,
-        use_cache: Optional[bool] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
-        cache_position: Optional[torch.LongTensor] = None,
-        quantized_token_ids: Optional[torch.LongTensor] = None,
+            self,
+            input_features: Optional[torch.FloatTensor] = None,
+            attention_mask: Optional[torch.LongTensor] = None,
+            decoder_input_ids: Optional[torch.LongTensor] = None,
+            decoder_attention_mask: Optional[torch.LongTensor] = None,
+            head_mask: Optional[torch.Tensor] = None,
+            decoder_head_mask: Optional[torch.Tensor] = None,
+            cross_attn_head_mask: Optional[torch.Tensor] = None,
+            encoder_outputs: Optional[Tuple[Tuple[torch.FloatTensor]]] = None,
+            past_key_values: Optional[Union[EncoderDecoderCache, Tuple[torch.FloatTensor]]] = None,
+            decoder_inputs_embeds: Optional[Tuple[torch.FloatTensor]] = None,
+            decoder_position_ids: Optional[Tuple[torch.LongTensor]] = None,
+            use_cache: Optional[bool] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
+            cache_position: Optional[torch.LongTensor] = None,
+            quantized_token_ids: Optional[torch.LongTensor] = None
     ) -> Union[Tuple[torch.Tensor], Seq2SeqModelOutput]:
         r"""
         Returns:
@@ -2182,25 +1853,15 @@ class WhisperVQModel(WhisperPreTrainedModel):
          >>> list(last_hidden_state.shape)
          [1, 2, 512]
          ```"""
-        output_attentions = (
-            output_attentions
-            if output_attentions is not None
-            else self.config.output_attentions
-        )
+        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
-            output_hidden_states
-            if output_hidden_states is not None
-            else self.config.output_hidden_states
+            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
         use_cache = use_cache if use_cache is not None else self.config.use_cache
-        return_dict = (
-            return_dict if return_dict is not None else self.config.use_return_dict
-        )
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if encoder_outputs is None:
-            input_features = self._mask_input_features(
-                input_features, attention_mask=attention_mask
-            )
+            input_features = self._mask_input_features(input_features, attention_mask=attention_mask)
 
             encoder_outputs = self.encoder(
                 input_features,
@@ -2209,7 +1870,7 @@ class WhisperVQModel(WhisperPreTrainedModel):
                 output_attentions=output_attentions,
                 output_hidden_states=output_hidden_states,
                 return_dict=return_dict,
-                quantized_token_ids=quantized_token_ids,
+                quantized_token_ids=quantized_token_ids
             )
         # If the user passed a tuple for encoder_outputs, we wrap it in a BaseModelOutput when return_dict=True
         elif return_dict and not isinstance(encoder_outputs, BaseModelOutput):
@@ -2220,13 +1881,9 @@ class WhisperVQModel(WhisperPreTrainedModel):
             )
 
         # decoder outputs consists of (dec_features, past_key_value, dec_hidden, dec_attn)
-        attention_mask = attention_mask[
-            :, :: self.encoder.conv1.stride[0] * self.encoder.conv2.stride[0]
-        ]
+        attention_mask = attention_mask[:, ::self.encoder.conv1.stride[0] * self.encoder.conv2.stride[0]]
         if self.encoder.config.pooling_kernel_size is not None:
-            attention_mask = attention_mask[
-                :, :: self.encoder.config.pooling_kernel_size
-            ]
+            attention_mask = attention_mask[:, ::self.encoder.config.pooling_kernel_size]
         decoder_outputs = self.decoder(
             input_ids=decoder_input_ids,
             attention_mask=decoder_attention_mask,
@@ -2298,31 +1955,27 @@ class WhisperVQForConditionalGeneration(WhisperGenerationMixin, WhisperPreTraine
         self.model.encoder._freeze_parameters()
 
     @add_start_docstrings_to_model_forward(WHISPER_INPUTS_DOCSTRING)
-    @replace_return_docstrings(
-        output_type=Seq2SeqLMOutput, config_class=_CONFIG_FOR_DOC
-    )
+    @replace_return_docstrings(output_type=Seq2SeqLMOutput, config_class=_CONFIG_FOR_DOC)
     def forward(
-        self,
-        input_features: Optional[torch.FloatTensor] = None,
-        attention_mask: Optional[torch.LongTensor] = None,
-        decoder_input_ids: Optional[torch.LongTensor] = None,
-        decoder_attention_mask: Optional[torch.LongTensor] = None,
-        head_mask: Optional[torch.Tensor] = None,
-        decoder_head_mask: Optional[torch.Tensor] = None,
-        cross_attn_head_mask: Optional[torch.Tensor] = None,
-        encoder_outputs: Optional[Tuple[Tuple[torch.FloatTensor]]] = None,
-        past_key_values: Optional[
-            Union[EncoderDecoderCache, Tuple[torch.FloatTensor]]
-        ] = None,
-        decoder_inputs_embeds: Optional[Tuple[torch.FloatTensor]] = None,
-        decoder_position_ids: Optional[Tuple[torch.LongTensor]] = None,
-        labels: Optional[torch.LongTensor] = None,
-        use_cache: Optional[bool] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
-        cache_position: Optional[torch.LongTensor] = None,
-        quantized_token_ids: Optional[torch.LongTensor] = None,
+            self,
+            input_features: Optional[torch.FloatTensor] = None,
+            attention_mask: Optional[torch.LongTensor] = None,
+            decoder_input_ids: Optional[torch.LongTensor] = None,
+            decoder_attention_mask: Optional[torch.LongTensor] = None,
+            head_mask: Optional[torch.Tensor] = None,
+            decoder_head_mask: Optional[torch.Tensor] = None,
+            cross_attn_head_mask: Optional[torch.Tensor] = None,
+            encoder_outputs: Optional[Tuple[Tuple[torch.FloatTensor]]] = None,
+            past_key_values: Optional[Union[EncoderDecoderCache, Tuple[torch.FloatTensor]]] = None,
+            decoder_inputs_embeds: Optional[Tuple[torch.FloatTensor]] = None,
+            decoder_position_ids: Optional[Tuple[torch.LongTensor]] = None,
+            labels: Optional[torch.LongTensor] = None,
+            use_cache: Optional[bool] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
+            cache_position: Optional[torch.LongTensor] = None,
+            quantized_token_ids: Optional[torch.LongTensor] = None
     ) -> Union[Tuple[torch.Tensor], Seq2SeqLMOutput]:
         r"""
         labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
@@ -2353,9 +2006,7 @@ class WhisperVQForConditionalGeneration(WhisperGenerationMixin, WhisperPreTraine
         >>> transcription
         ' Mr. Quilter is the apostle of the middle classes, and we are glad to welcome his gospel.'
         ```"""
-        return_dict = (
-            return_dict if return_dict is not None else self.config.use_return_dict
-        )
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if labels is not None:
             if decoder_input_ids is None and decoder_inputs_embeds is None:
@@ -2380,7 +2031,7 @@ class WhisperVQForConditionalGeneration(WhisperGenerationMixin, WhisperPreTraine
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
             cache_position=cache_position,
-            quantized_token_ids=quantized_token_ids,
+            quantized_token_ids=quantized_token_ids
         )
         lm_logits = self.proj_out(outputs[0])
 
@@ -2389,9 +2040,7 @@ class WhisperVQForConditionalGeneration(WhisperGenerationMixin, WhisperPreTraine
             loss_fct = CrossEntropyLoss()
             # move labels to correct device to enable PP
             labels = labels.to(lm_logits.device)
-            loss = loss_fct(
-                lm_logits.view(-1, self.config.vocab_size), labels.reshape(-1)
-            )
+            loss = loss_fct(lm_logits.view(-1, self.config.vocab_size), labels.reshape(-1))
             if self.training and self.model.encoder.quantize_loss is not None:
                 loss = loss + self.model.encoder.quantize_loss
 
@@ -2412,16 +2061,16 @@ class WhisperVQForConditionalGeneration(WhisperGenerationMixin, WhisperPreTraine
         )
 
     def prepare_inputs_for_generation(
-        self,
-        decoder_input_ids,
-        past_key_values=None,
-        use_cache=None,
-        encoder_outputs=None,
-        attention_mask=None,
-        decoder_attention_mask=None,
-        cache_position=None,
-        quantized_token_ids=None,
-        **kwargs,
+            self,
+            decoder_input_ids,
+            past_key_values=None,
+            use_cache=None,
+            encoder_outputs=None,
+            attention_mask=None,
+            decoder_attention_mask=None,
+            cache_position=None,
+            quantized_token_ids=None,
+            **kwargs,
     ):
         decoder_position_ids = None
         if decoder_attention_mask is not None:
@@ -2430,11 +2079,7 @@ class WhisperVQForConditionalGeneration(WhisperGenerationMixin, WhisperPreTraine
         past_length = 0
         if past_key_values is not None:
             if isinstance(past_key_values, EncoderDecoderCache):
-                past_length = (
-                    cache_position[0]
-                    if cache_position is not None
-                    else past_key_values.get_seq_length()
-                )
+                past_length = cache_position[0] if cache_position is not None else past_key_values.get_seq_length()
             else:
                 past_length = past_key_values[0][0].shape[2]
 
@@ -2450,31 +2095,27 @@ class WhisperVQForConditionalGeneration(WhisperGenerationMixin, WhisperPreTraine
             if decoder_position_ids is not None:
                 decoder_position_ids = decoder_position_ids[:, remove_prefix_length:]
                 # This `clone` call is needed to avoid recapturing cuda graphs with `torch.compile`'s  `mode="reduce-overhead`, as otherwise the input `position_ids` would have various stride during the decoding. Here, simply using `.contiguous()` is not sufficient as in the batch size = 1 case, `position_ids` is already contiguous but with varying stride which retriggers a capture.
-                decoder_position_ids = decoder_position_ids.clone(
-                    memory_format=torch.contiguous_format
-                )
+                decoder_position_ids = decoder_position_ids.clone(memory_format=torch.contiguous_format)
 
         if cache_position is None:
             cache_position = torch.arange(
-                past_length,
-                past_length + decoder_input_ids.shape[1],
-                device=decoder_input_ids.device,
+                past_length, past_length + decoder_input_ids.shape[1], device=decoder_input_ids.device
             )
         elif use_cache:
-            cache_position = cache_position[-decoder_input_ids.shape[1] :]
+            cache_position = cache_position[-decoder_input_ids.shape[1]:]
 
         # The `contiguous()` here is necessary to have a static stride during decoding. torchdynamo otherwise
         # recompiles graphs as the stride of the inputs is a guard. Ref: https://github.com/huggingface/transformers/pull/29114
         decoder_input_ids = decoder_input_ids.contiguous()
 
         if (
-            isinstance(past_key_values, EncoderDecoderCache)
-            and (
+                isinstance(past_key_values, EncoderDecoderCache)
+                and (
                 isinstance(past_key_values.self_attention_cache, StaticCache)
                 or isinstance(past_key_values.cross_attention_cache, StaticCache)
-            )
-            and decoder_attention_mask is not None
-            and decoder_attention_mask.ndim == 2
+        )
+                and decoder_attention_mask is not None
+                and decoder_attention_mask.ndim == 2
         ):
             batch_size, sequence_length = decoder_input_ids.shape
             device = decoder_input_ids.device
@@ -2482,17 +2123,15 @@ class WhisperVQForConditionalGeneration(WhisperGenerationMixin, WhisperPreTraine
             dtype = self.proj_out.weight.dtype
             min_dtype = torch.finfo(dtype).min
 
-            decoder_attention_mask = (
-                _prepare_4d_causal_attention_mask_with_cache_position(
-                    decoder_attention_mask,
-                    sequence_length=sequence_length,
-                    target_length=past_key_values.self_attention_cache.get_max_length(),
-                    dtype=dtype,
-                    device=device,
-                    min_dtype=min_dtype,
-                    cache_position=cache_position,
-                    batch_size=batch_size,
-                )
+            decoder_attention_mask = _prepare_4d_causal_attention_mask_with_cache_position(
+                decoder_attention_mask,
+                sequence_length=sequence_length,
+                target_length=past_key_values.self_attention_cache.get_max_length(),
+                dtype=dtype,
+                device=device,
+                min_dtype=min_dtype,
+                cache_position=cache_position,
+                batch_size=batch_size,
             )
 
         return {
@@ -2504,33 +2143,16 @@ class WhisperVQForConditionalGeneration(WhisperGenerationMixin, WhisperPreTraine
             "decoder_attention_mask": decoder_attention_mask,
             "decoder_position_ids": decoder_position_ids,
             "cache_position": cache_position,
-            "quantized_token_ids": quantized_token_ids,
+            "quantized_token_ids": quantized_token_ids
         }
 
-    def _retrieve_init_tokens(
-        self,
-        input_features,
-        batch_size,
-        generation_config,
-        config,
-        num_segment_frames,
-        kwargs,
-    ):
+    def _retrieve_init_tokens(self, input_features, batch_size, generation_config, config, num_segment_frames, kwargs):
         if self.config.skip_language_detection:
-            return torch.as_tensor(
-                [[generation_config.decoder_start_token_id] for _ in range(batch_size)],
-                dtype=torch.long,
-                device=self.device,
-            ).expand(batch_size, -1)
+            return torch.as_tensor([[generation_config.decoder_start_token_id] for _ in range(batch_size)],
+                                   dtype=torch.long, device=self.device).expand(batch_size, -1)
         else:
-            return super()._retrieve_init_tokens(
-                input_features,
-                batch_size,
-                generation_config,
-                config,
-                num_segment_frames,
-                kwargs,
-            )
+            return super()._retrieve_init_tokens(input_features, batch_size, generation_config, config,
+                                                 num_segment_frames, kwargs)
 
 
 class WhisperDecoderWrapper(WhisperPreTrainedModel):
@@ -2592,24 +2214,22 @@ class WhisperForCausalLM(WhisperPreTrainedModel):
     def get_decoder(self):
         return self.model.decoder
 
-    @replace_return_docstrings(
-        output_type=CausalLMOutputWithCrossAttentions, config_class=_CONFIG_FOR_DOC
-    )
+    @replace_return_docstrings(output_type=CausalLMOutputWithCrossAttentions, config_class=_CONFIG_FOR_DOC)
     def forward(
-        self,
-        input_ids: torch.LongTensor = None,
-        attention_mask: Optional[torch.Tensor] = None,
-        encoder_outputs: Optional[Tuple[torch.FloatTensor]] = None,
-        head_mask: Optional[torch.Tensor] = None,
-        cross_attn_head_mask: Optional[torch.Tensor] = None,
-        past_key_values: Optional[Tuple[Tuple[torch.FloatTensor]]] = None,
-        inputs_embeds: Optional[torch.FloatTensor] = None,
-        labels: Optional[torch.LongTensor] = None,
-        use_cache: Optional[bool] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
-        cache_position: Optional[torch.LongTensor] = None,
+            self,
+            input_ids: torch.LongTensor = None,
+            attention_mask: Optional[torch.Tensor] = None,
+            encoder_outputs: Optional[Tuple[torch.FloatTensor]] = None,
+            head_mask: Optional[torch.Tensor] = None,
+            cross_attn_head_mask: Optional[torch.Tensor] = None,
+            past_key_values: Optional[Tuple[Tuple[torch.FloatTensor]]] = None,
+            inputs_embeds: Optional[torch.FloatTensor] = None,
+            labels: Optional[torch.LongTensor] = None,
+            use_cache: Optional[bool] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
+            cache_position: Optional[torch.LongTensor] = None,
     ) -> Union[Tuple, CausalLMOutputWithCrossAttentions]:
         r"""
         Args:
@@ -2695,19 +2315,11 @@ class WhisperForCausalLM(WhisperPreTrainedModel):
         >>> transcription
         ' Mr. Quilter is the apostle of the middle classes and we are glad to welcome his gospel.'
         ```"""
-        output_attentions = (
-            output_attentions
-            if output_attentions is not None
-            else self.config.output_attentions
-        )
+        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
-            output_hidden_states
-            if output_hidden_states is not None
-            else self.config.output_hidden_states
+            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
-        return_dict = (
-            return_dict if return_dict is not None else self.config.use_return_dict
-        )
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         # If the user passed a tuple or `BaseModelOutput` for encoder_outputs, we extract only the hidden states
         if isinstance(encoder_outputs, (BaseModelOutput, tuple, list)):
@@ -2751,23 +2363,19 @@ class WhisperForCausalLM(WhisperPreTrainedModel):
         )
 
     def prepare_inputs_for_generation(
-        self,
-        input_ids,
-        past_key_values=None,
-        use_cache=None,
-        encoder_outputs=None,
-        attention_mask=None,
-        cache_position=None,
-        **kwargs,
+            self,
+            input_ids,
+            past_key_values=None,
+            use_cache=None,
+            encoder_outputs=None,
+            attention_mask=None,
+            cache_position=None,
+            **kwargs,
     ):
         past_length = 0
         if past_key_values is not None:
             if isinstance(past_key_values, (Cache, EncoderDecoderCache)):
-                past_length = (
-                    cache_position[0]
-                    if cache_position is not None
-                    else past_key_values.get_seq_length()
-                )
+                past_length = cache_position[0] if cache_position is not None else past_key_values.get_seq_length()
             else:
                 past_length = past_key_values[0][0].shape[2]
 
@@ -2781,11 +2389,9 @@ class WhisperForCausalLM(WhisperPreTrainedModel):
             input_ids = input_ids[:, remove_prefix_length:]
 
         if cache_position is None:
-            cache_position = torch.arange(
-                past_length, past_length + input_ids.shape[1], device=input_ids.device
-            )
+            cache_position = torch.arange(past_length, past_length + input_ids.shape[1], device=input_ids.device)
         elif use_cache:
-            cache_position = cache_position[-input_ids.shape[1] :]
+            cache_position = cache_position[-input_ids.shape[1]:]
 
         return {
             "encoder_outputs": encoder_outputs,
@@ -2801,10 +2407,7 @@ class WhisperForCausalLM(WhisperPreTrainedModel):
         reordered_past = ()
         for layer_past in past_key_values:
             reordered_past += (
-                tuple(
-                    past_state.index_select(0, beam_idx.to(past_state.device))
-                    for past_state in layer_past
-                ),
+                tuple(past_state.index_select(0, beam_idx.to(past_state.device)) for past_state in layer_past),
             )
         return reordered_past
 
@@ -2821,9 +2424,7 @@ class WhisperForAudioClassification(WhisperPreTrainedModel):
         super().__init__(config)
 
         self.encoder = WhisperVQEncoder(config)
-        num_layers = (
-            config.num_hidden_layers + 1
-        )  # transformer layers + input embeddings
+        num_layers = config.num_hidden_layers + 1  # transformer layers + input embeddings
         if config.use_weighted_layer_sum:
             self.layer_weights = nn.Parameter(torch.ones(num_layers) / num_layers)
         self.projector = nn.Linear(config.hidden_size, config.classifier_proj_size)
@@ -2846,18 +2447,16 @@ class WhisperForAudioClassification(WhisperPreTrainedModel):
         self.encoder.set_input_embeddings(value)
 
     @add_start_docstrings_to_model_forward(WHISPER_ENCODER_INPUTS_DOCSTRING)
-    @replace_return_docstrings(
-        output_type=SequenceClassifierOutput, config_class=_CONFIG_FOR_DOC
-    )
+    @replace_return_docstrings(output_type=SequenceClassifierOutput, config_class=_CONFIG_FOR_DOC)
     def forward(
-        self,
-        input_features: Optional[torch.LongTensor] = None,
-        head_mask: Optional[torch.Tensor] = None,
-        encoder_outputs: Optional[Tuple[Tuple[torch.FloatTensor]]] = None,
-        labels: Optional[torch.LongTensor] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
+            self,
+            input_features: Optional[torch.LongTensor] = None,
+            head_mask: Optional[torch.Tensor] = None,
+            encoder_outputs: Optional[Tuple[Tuple[torch.FloatTensor]]] = None,
+            labels: Optional[torch.LongTensor] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
     ) -> Union[Tuple[torch.Tensor], SequenceClassifierOutput]:
         r"""
         labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
@@ -2894,24 +2493,16 @@ class WhisperForAudioClassification(WhisperPreTrainedModel):
         'Afrikaans'
         ```"""
 
-        output_attentions = (
-            output_attentions
-            if output_attentions is not None
-            else self.config.output_attentions
-        )
+        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
-            output_hidden_states
-            if output_hidden_states is not None
-            else self.config.output_hidden_states
+            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
         if self.config.use_weighted_layer_sum:
             output_hidden_states = True
         elif output_hidden_states is None:
             output_hidden_states = self.config.output_hidden_states
 
-        return_dict = (
-            return_dict if return_dict is not None else self.config.use_return_dict
-        )
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if encoder_outputs is None:
             encoder_outputs = self.encoder(

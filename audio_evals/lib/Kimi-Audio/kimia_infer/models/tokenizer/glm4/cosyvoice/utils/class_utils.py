@@ -23,18 +23,14 @@ from cosyvoice.transformer.subsampling import (
     Conv2dSubsampling6,
     Conv2dSubsampling8,
 )
-from cosyvoice.transformer.embedding import (
-    PositionalEncoding,
-    RelPositionalEncoding,
-    WhisperPositionalEncoding,
-    LearnablePositionalEncoding,
-    NoPositionalEncoding,
-)
-from cosyvoice.transformer.attention import (
-    MultiHeadedAttention,
-    RelPositionMultiHeadedAttention,
-    BlockRelPositionMultiHeadedAttention,
-)
+from cosyvoice.transformer.embedding import (PositionalEncoding,
+                                             RelPositionalEncoding,
+                                             WhisperPositionalEncoding,
+                                             LearnablePositionalEncoding,
+                                             NoPositionalEncoding)
+from cosyvoice.transformer.attention import (MultiHeadedAttention,
+                                             RelPositionMultiHeadedAttention,
+                                             BlockRelPositionMultiHeadedAttention)
 from cosyvoice.transformer.embedding import EspnetRelPositionalEncoding
 from cosyvoice.transformer.subsampling import LegacyLinearNoSubsampling
 
@@ -56,7 +52,7 @@ COSYVOICE_SUBSAMPLE_CLASSES = {
     "conv2d": Conv2dSubsampling4,
     "conv2d6": Conv2dSubsampling6,
     "conv2d8": Conv2dSubsampling8,
-    "paraformer_dummy": torch.nn.Identity,
+    'paraformer_dummy': torch.nn.Identity
 }
 
 COSYVOICE_EMB_CLASSES = {
