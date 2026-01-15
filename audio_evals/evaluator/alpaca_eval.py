@@ -73,3 +73,60 @@ class ChatbotEvaluator(Evaluator):
             "pred": pred,
             "ref": label,
         }
+
+class ImprosChatbotEvaluatorHard(Evaluator):
+    def __init__(self, model_name: str):
+        self.model_name = model_name
+
+    def _eval(self, pred, label, **kwargs) -> Dict[str, any]:
+        from audio_evals.registry import registry
+
+        model = registry.get_model(self.model_name)
+        prompt = registry.get_prompt("impros-chatbot-eval")
+
+        p = prompt.load(
+            user_transcription=kwargs["content"],
+            user_emotion=kwargs["tone"],
+            user_sarcasm="{}. Implicate {}".format(kwargs["category"], kwargs["implication"]),
+            user_age=kwargs.get("age", "unknown"),
+            user_gender=kwargs.get("gender", "unknown"),
+            response=pred
+        )
+        res = model.inference(p, temperature=0, max_tokens=2048)
+
+        # res_d = re.search(r"```json(.*?)```", res, re.DOTALL)
+        d = re.search(r'\[\[(\d+)\]\]', res)
+        return {
+            "geval": int(d.group(1)),
+            "pred": pred,
+            "ref": label,
+        }
+
+class ImprosChatbotEvaluator(Evaluator):
+    def __init__(self, model_name: str):
+        self.model_name = model_name
+
+    def _eval(self, pred, label, **kwargs) -> Dict[str, any]:
+        from audio_evals.registry import registry
+
+        model = registry.get_model(self.model_name)
+        prompt = registry.get_prompt("impros-chatbot-eval")
+
+        task = kwargs.get("task", None)
+        p = prompt.load(
+            user_transcription=task["turns"][-1]["content"],
+            user_emotion=task["turns"][-1]["emotion_tags"],
+            user_sarcasm="none",
+            user_age=kwargs.get("age", "unknown"),
+            user_gender=kwargs.get("gender", "unknown"),
+            response=pred
+        )
+        res = model.inference(p, temperature=0, max_tokens=2048)
+
+        # res_d = re.search(r"```json(.*?)```", res, re.DOTALL)
+        d = re.search(r'\[\[(\d+)\]\]', res)
+        return {
+            "geval": int(d.group(1)),
+            "pred": pred,
+            "ref": label,
+        }

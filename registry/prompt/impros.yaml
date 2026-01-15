@@ -1,0 +1,43 @@
+
+impros-chatbot-eval:
+  class: audio_evals.prompt.base.Prompt
+  args:
+    template: '[Instruction]
+Please act as an impartial human dialogue expert and evaluate the quality of the agent’s response
+to the user speech displayed below.
+
+Your evaluation should focus on **Continuation Fitness**, with particular attention to
+paralinguistic alignment, including:
+- emotional alignment
+- sarcasm or irony understanding
+- speaking style and tone appropriateness
+- personalization based on explicitly stated age or gender (do NOT assume or stereotype)
+
+You should judge whether the agent’s response is a natural and appropriate continuation
+of the user’s spoken content and speaking style.
+
+Begin your evaluation by providing a VERY brief explanation (1–2 sentences),
+explicitly mentioning at least one key paralinguistic cue (e.g., emotion, sarcasm, tone)
+and whether it is matched or mismatched.
+
+After providing your explanation, you
+must rate the response on a scale of 1 to 5 by strictly following this format:
+"[[rating]]", for example: "Rating: [[3]]".
+
+Scoring rubric:
+5 = Perfect: Correctly matches emotion and/or sarcasm with high-EQ wording or tone, and clearly enhances the dialogue.
+4 = Good: Mostly matches paralinguistic cues; neutral or slightly missed opportunity, but not jarring.
+3 = Average: Largely neutral or mechanical; limited alignment, but no clear mismatch.
+2 = Poor: Noticeable mismatch in emotion, sarcasm interpretation, or speaking style.
+1 = Very Poor: Reverse empathy, clear misinterpretation of intent, or highly inappropriate style.
+
+[User Information]
+- Transcription: {{user_transcription}}
+- Emotion (if provided): {{user_emotion}}
+- Sarcasm (if provided): {{user_sarcasm}}
+- Age (if explicitly stated): {{user_age}}
+- Gender (if explicitly stated): {{user_gender}}
+
+[Agent Response]
+- Transcription: {{response}}'
+

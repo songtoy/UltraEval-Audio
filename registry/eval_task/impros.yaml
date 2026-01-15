@@ -1,0 +1,20 @@
+impros-alpaca-eval:
+  class: audio_evals.base.EvalTaskCfg
+  args:
+    dataset: impros-test-bench
+    prompt: direct-aqa
+    model: qwen-audio-chat
+    post_process: ['extract_audio', 'speech2text']
+    evaluator: impros_chatbot_eval
+    agg: geval
+
+
+impros-alpaca-eval-hard:
+  class: audio_evals.base.EvalTaskCfg
+  args:
+    dataset: impros-hard-bench
+    prompt: direct-aqa
+    model: qwen-audio-chat
+    post_process: ['extract_audio', 'speech2text']
+    evaluator: impros_chatbot_eval_hard
+    agg: geval

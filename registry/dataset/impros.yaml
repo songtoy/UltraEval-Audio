@@ -1,0 +1,13 @@
+impros-hard-bench:
+  class: audio_evals.dataset.dataset.JsonlFile
+  args:
+    default_task: impros-alpaca-eval-hard
+    f_name: /root/zhoust/Impros/bench/Hard-Bench/hard_bench_ultraeval.jsonl
+    ref_col: golden_answer 
+
+impros-test-bench:
+  class: audio_evals.dataset.dataset.JsonlFile
+  args:
+    default_task: impros-alpaca-eval
+    f_name: /root/zhoust/Impros/bench/Impros-Bench/impros-test-bench_ultraeval.jsonl
+    ref_col: golden_answer 
