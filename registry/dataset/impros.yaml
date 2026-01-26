@@ -11,3 +11,17 @@ impros-test-bench:
     default_task: impros-alpaca-eval
     f_name: /root/zhoust/Impros/bench/Impros-Bench/impros-test-bench_ultraeval.jsonl
     ref_col: golden_answer 
+
+impros-test-bench-V2:
+  class: audio_evals.dataset.dataset.JsonlFile
+  args:
+    default_task: impros-alpaca-eval
+    f_name: /root/zhoust/Impros/bench/Impros-Bench/impros-test-bench_ultraeval-V2.jsonl
+    ref_col: golden_answer 
+
+impros-chat-bench:
+  class: audio_evals.dataset.dataset.JsonlFile
+  args:
+    default_task: impros-chat
+    f_name: /root/zhoust/Impros/bench/Impros-Bench/impros-test-bench_ultraeval-V2.jsonl
+    ref_col: golden_answer 

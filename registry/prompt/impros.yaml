@@ -1,3 +1,13 @@
+sys-aqa:
+  class: audio_evals.prompt.base.Prompt
+  args:
+    template:
+      - role: user
+        contents:
+          - type: text
+            value: "{{SystemPrompt}}"
+          - type: audio
+            value: "{{WavPath}}"
 
 impros-chatbot-eval:
   class: audio_evals.prompt.base.Prompt
