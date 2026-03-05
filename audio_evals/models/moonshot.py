@@ -18,6 +18,7 @@ class KimiAudioModel(OfflineModel):
         model_path: str = "moonshotai/Kimi-Audio-7B-Instruct",
         speech: bool = False,
         sample_params: Dict = None,
+        thinking_mode: bool = False,
         *args,
         **kwargs,
     ):
@@ -31,6 +32,10 @@ class KimiAudioModel(OfflineModel):
         }
         if speech:
             self.command_args["speech"] = ""
+        
+        if thinking_mode:
+            self.command_args["thinking_mode"] = ""
+
         super().__init__(is_chat=True, sample_params=sample_params)
 
     def _parse_role_content(self, role_content: Dict):

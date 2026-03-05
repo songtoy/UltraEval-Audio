@@ -27,6 +27,12 @@ if __name__ == "__main__":
         default=False,
         help="Whether to use speech output",
     )
+    parser.add_argument(
+        "--thinking_mode",
+        action="store_true",
+        default=False,
+        help="Whether to use thinking mode",
+    )
     config = parser.parse_args()
 
     start_time = time.time()
@@ -66,7 +72,8 @@ if __name__ == "__main__":
             output_type = "both" if config.speech else "text"
             # 推理
             wav, text = model.generate(
-                messages, **sampling_params, output_type=output_type
+                messages, **sampling_params, output_type=output_type,
+                thinking_mode=config.thinking_mode,
             )
 
             if config.speech:

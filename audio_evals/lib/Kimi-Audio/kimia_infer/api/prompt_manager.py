@@ -36,10 +36,11 @@ class KimiAPromptManager:
         else:
             logger.info(f"Can not find text tokenizer in {model_path}, Loading default text tokenizer from moonshotai/Kimi-Audio-7B-Instruct")
             self.text_tokenizer = AutoTokenizer.from_pretrained(
-                "moonshotai/Kimi-Audio-7B-Instruct", trust_remote_code=True
+                "/root/zhoust/pretrained_models/moonshotai/Kimi-Audio-7B-Instruct", trust_remote_code=True
             )
 
         self.extra_tokens = instantiate_extra_tokens(self.text_tokenizer)
+        print(self.extra_tokens)
 
 
         self.kimia_token_offset = kimia_token_offset
@@ -85,6 +86,7 @@ class KimiAPromptManager:
         has_msg_end_token=False,
         extract_whisper_feature=False,
         output_type: str = "text",
+        add_thinking_bos: bool = False,
     ):
         kimia_content_msg = KimiAContent()
 
@@ -163,6 +165,10 @@ class KimiAPromptManager:
             kimia_content_msg.audio_append(self.extra_tokens.msg_end, audio_token_loss_mask=False)
             kimia_content_msg.text_append(self.extra_tokens.kimia_text_blank)
 
+        if add_thinking_bos:
+            kimia_content_msg.text_append(self.extra_tokens.thinking_bos)
+            kimia_content_msg.audio_append(self.extra_tokens.kimia_text_blank)
+
         assert (
             kimia_content_msg.is_valid()
         ), f"kimia_content_msg is not valid: {kimia_content_msg}"
@@ -170,7 +176,7 @@ class KimiAPromptManager:
         return kimia_content_msg
 
     def get_prompt(
-        self, messages: List[Dict], output_type: str = "text", add_assistant_start_msg: bool = True
+        self, messages: List[Dict], output_type: str = "text", add_assistant_start_msg: bool = True, add_thinking_bos: bool = False
     ) -> KimiAContent:
         """
         messages: List[Dict]
@@ -230,6 +236,7 @@ class KimiAPromptManager:
                 tokenize_role=True,
                 has_ct_token=False,
                 has_msg_end_token=False,
+                add_thinking_bos=add_thinking_bos,
             )
 
             msgs.append(assistant_start_msg)

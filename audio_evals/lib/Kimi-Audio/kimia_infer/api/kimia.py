@@ -48,6 +48,9 @@ class KimiAudio(object):
         self.extra_tokens = self.prompt_manager.extra_tokens
         self.eod_ids = [self.extra_tokens.msg_end, self.extra_tokens.media_end]
 
+        self.thinking_bos_id = self.extra_tokens.thinking_bos
+        self.thinking_eos_id = self.extra_tokens.thinking_eos
+
     @torch.inference_mode()
     def _generate_loop(
         self,
@@ -65,6 +68,7 @@ class KimiAudio(object):
         is_continuous_mask: torch.Tensor = None,
         continous_feature: torch.Tensor = None,
         output_type: str = "text",
+        thinking_mode: bool = False,
     ):
 
         sampler = KimiASampler(
@@ -79,6 +83,7 @@ class KimiAudio(object):
         )
 
         text_stream_is_finished = False
+        text_thinking_mode = thinking_mode
         previous_audio_tokens = torch.zeros(
             (4096,),
             dtype=torch.int,
@@ -108,6 +113,9 @@ class KimiAudio(object):
         valid_text_length = 0
         valid_audio_length = 0
 
+        thinking_delay = 0
+
+
         for i in tqdm.tqdm(
             range(max_new_tokens), desc="Generating tokens", disable=False
         ):
@@ -133,14 +141,15 @@ class KimiAudio(object):
 
             if text_stream_is_finished:
                 next_token_text.fill_(self.extra_tokens.kimia_text_blank)
-            elif next_token_text.item() == self.extra_tokens.kimia_text_eos:
+            elif not text_thinking_mode and next_token_text.item() == self.extra_tokens.kimia_text_eos: 
+                # Only set finished when not in thinking mode
                 text_stream_is_finished = True
             else:
                 valid_text_length += 1
 
             text_previous_tokens[i : i + 1] = next_token_text
 
-            if i < self.kimia_text_audiodelaytokens:
+            if text_thinking_mode or i < self.kimia_text_audiodelaytokens + thinking_delay:
                 next_audio_token.fill_(self.extra_tokens.kimia_text_blank)
             else:
                 if output_type == "text":
@@ -151,6 +160,13 @@ class KimiAudio(object):
             previous_audio_tokens[i : i + 1] = next_audio_token
 
             audio_stream_is_finished = next_audio_token.item() in self.eod_ids
+
+            # Handle thinking mode transition
+            if text_thinking_mode and next_token_text.item() == self.extra_tokens.kimia_text_eos: 
+                text_thinking_mode = False
+                thinking_delay = valid_text_length
+
+            #print("Generated Audio Token:", next_audio_token.item(), " Generated Text Token:", next_token_text.item())
 
             if (
                 output_type == "text"
@@ -167,8 +183,8 @@ class KimiAudio(object):
                 )
                 return_audio_tokens = (
                     previous_audio_tokens[
-                        self.kimia_text_audiodelaytokens : valid_audio_length
-                        + self.kimia_text_audiodelaytokens
+                        self.kimia_text_audiodelaytokens + thinking_delay : valid_audio_length
+                        + self.kimia_text_audiodelaytokens + thinking_delay
                     ]
                     .detach()
                     .cpu()
@@ -196,8 +212,8 @@ class KimiAudio(object):
         )
         return_audio_tokens = (
             previous_audio_tokens[
-                self.kimia_text_audiodelaytokens : valid_audio_length
-                + self.kimia_text_audiodelaytokens
+                self.kimia_text_audiodelaytokens + thinking_delay : valid_audio_length
+                + self.kimia_text_audiodelaytokens + thinking_delay
             ]
             .detach()
             .cpu()
@@ -211,6 +227,7 @@ class KimiAudio(object):
         self,
         chats: list[dict],
         output_type="text",
+        thinking_mode=False,
         audio_temperature=0.0,
         audio_top_k=5,
         text_temperature=0.0,
@@ -227,7 +244,7 @@ class KimiAudio(object):
 
         assert output_type in ["text", "both"]
 
-        history = self.prompt_manager.get_prompt(chats, output_type=output_type)
+        history = self.prompt_manager.get_prompt(chats, output_type=output_type, add_thinking_bos=thinking_mode)
 
         audio_input_ids, text_input_ids, is_continuous_mask, _, _ = history.to_tensor()
         audio_features = history.continuous_feature
@@ -261,6 +278,7 @@ class KimiAudio(object):
             is_continuous_mask=is_continuous_mask,
             continous_feature=audio_features,
             output_type=output_type,
+            thinking_mode=thinking_mode,
         )
 
         generated_wav_tokens = [
@@ -315,8 +333,15 @@ class KimiAudio(object):
 
     def detokenize_text(self, text_tokens):
         valid_text_ids = []
+        past_thinking_eos = False
+        if not self.thinking_eos_id in text_tokens:
+            past_thinking_eos = True
+
         for x in text_tokens:
-            if x == self.extra_tokens.kimia_text_eos:
+            if x == self.extra_tokens.kimia_text_eos and past_thinking_eos:
                 break
+            if x == self.extra_tokens.kimia_text_eos:
+                past_thinking_eos = True
+                continue
             valid_text_ids.append(x)
         return self.prompt_manager.text_tokenizer.decode(valid_text_ids)

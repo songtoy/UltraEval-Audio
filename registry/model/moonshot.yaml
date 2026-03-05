@@ -186,3 +186,47 @@ kimia_sft_0112_persona_5_epoch_eval_lr_5e-6_cosine_eos_both_with_sys-speech:
     speech: True
     env_path: envs/kimiaudio
     requirements_path: audio_evals/lib/Kimi-Audio/requirements.txt
+
+# With Sys, Context
+kimia_sft_0112_persona_5_epoch_eval_lr_1e-6_cosine_eos_both_with_sys_context:
+  class: audio_evals.models.moonshot.KimiAudioModel
+  args:
+    model_path: /root/zhoust/Kimi-Audio/output/kimia_sft_0112_persona_5_epoch_eval_lr_1e-6_cosine_eos_both_with_sys_context/finetuned_hf_for_inference
+    env_path: envs/kimiaudio
+    requirements_path: audio_evals/lib/Kimi-Audio/requirements.txt
+  
+kimia_sft_0112_persona_5_epoch_eval_lr_1e-6_cosine_eos_both_with_sys_context-speech:
+  class: audio_evals.models.moonshot.KimiAudioModel
+  args:
+    model_path: /root/zhoust/Kimi-Audio/output/kimia_sft_0112_persona_5_epoch_eval_lr_1e-6_cosine_eos_both_with_sys_context/finetuned_hf_for_inference
+    speech: True
+    env_path: envs/kimiaudio
+    requirements_path: audio_evals/lib/Kimi-Audio/requirements.txt
+
+
+# With Sys, Context, CoT
+kimia_sft_0112_persona_5_epoch_eval_lr_1e-6_cosine_eos_both_with_sys_context_cot:
+  class: audio_evals.models.moonshot.KimiAudioModel
+  args:
+    model_path: /root/zhoust/Kimi-Audio/output/kimia_sft_0112_persona_5_epoch_eval_lr_1e-6_cosine_eos_both_with_sys_context_cot/finetuned_hf_for_inference
+    env_path: envs/kimiaudio
+    requirements_path: audio_evals/lib/Kimi-Audio/requirements.txt
+
+kimia_sft_0112_persona_5_epoch_eval_lr_1e-6_cosine_eos_both_with_sys_context_cot-speech:
+  class: audio_evals.models.moonshot.KimiAudioModel
+  args:
+    model_path: /root/zhoust/Kimi-Audio/output/kimia_sft_0112_persona_5_epoch_eval_lr_1e-6_cosine_eos_both_with_sys_context_cot/finetuned_hf_for_inference
+    speech: True
+    thinking_mode: True
+    env_path: envs/kimiaudio
+    requirements_path: audio_evals/lib/Kimi-Audio/requirements.txt
+
+
+kimia_sft_0112_persona_5_epoch_eval_lr_1e-6_cosine_eos_both_with_sys_context_cot_qwen-speech:
+  class: audio_evals.models.moonshot.KimiAudioModel
+  args:
+    model_path: /root/zhoust/Kimi-Audio/output/kimia_sft_0112_persona_5_epoch_eval_lr_1e-6_cosine_eos_both_with_sys_context_cot_qwen/finetuned_hf_for_inference
+    speech: True
+    thinking_mode: True
+    env_path: envs/kimiaudio
+    requirements_path: audio_evals/lib/Kimi-Audio/requirements.txt

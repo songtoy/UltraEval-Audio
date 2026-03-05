@@ -20,6 +20,9 @@ class ExtraTokens:
     kimia_speech_ctd_id: int
 
     pad: int
+    
+    thinking_bos: int
+    thinking_eos: int
 
 
 def instantiate_extra_tokens(tokenizer):
@@ -42,4 +45,6 @@ def instantiate_extra_tokens(tokenizer):
         kimia_speech_ct_id=map_fn("<|im_kimia_speech_ct_id|>"),  # 27
         kimia_speech_ctd_id=map_fn("<|im_kimia_speech_ctd_id|>"),  # 28
         pad=tokenizer.pad_id,
+        thinking_bos=map_fn("<think>"),
+        thinking_eos=map_fn("</think>"),
     )
