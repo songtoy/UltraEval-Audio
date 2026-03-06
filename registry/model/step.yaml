@@ -9,3 +9,18 @@ step-speech:
   args:
     url: http://127.0.0.1:5000/inference
     s2t: false
+
+stepaudio2-mini:
+  class: audio_evals.models.stepfun.StepAudio2
+  args:
+    env_path: envs/step-audio2
+    requirements_path: audio_evals/lib/Step-Audio2/requirements.txt
+    model_path: /root/zhoust/pretrained_models/stepfun-ai/Step-Audio-2-mini
+
+stepaudio2-mini-speech:
+  class: audio_evals.models.stepfun.StepAudio2
+  args:
+    env_path: envs/step-audio2
+    requirements_path: audio_evals/lib/Step-Audio2/requirements.txt
+    model_path: /root/zhoust/pretrained_models/stepfun-ai/Step-Audio-2-mini
+    speech: true

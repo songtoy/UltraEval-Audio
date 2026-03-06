@@ -1,0 +1,43 @@
+step-audio-single_choice_with_answer:
+  class: audio_evals.prompt.base.Prompt
+  args:
+    template:
+      - role: system
+        contents: 
+          - type: text
+            value: 'You are an expert in audio analysis, please analyze the audio content and answer the questions accurately.'
+      - role: user
+        contents:
+          - type: audio
+            value: "{{WavPath}}"
+          - type: text
+            value: "{{question}}  Select one option from the provided choices.\n{{choices}}"
+
+
+step-audio-emo_analysis:
+  class: audio_evals.prompt.base.Prompt
+  args:
+    template:
+      - role: system
+        contents: 
+          - type: text
+            value: 'You are an expert in audio analysis, please analyze the audio content and answer the questions accurately.'
+      - role: user
+        contents:
+          - type: audio
+            value: "{{WavPath}}"
+          - type: text
+            value: "listen the audio and judge the emotion of the speaker, the answer must be one of [surprise,anger,neutral,joy,sadness,fear,disgust], answer without explain"
+
+step-audio-direct_aqa:
+  class: audio_evals.prompt.base.Prompt
+  args:
+    template:
+      - role: system
+        contents: 
+          - type: text
+            value: 'You are a helpful assistant.'
+      - role: user
+        contents:
+          - type: audio
+            value: "{{WavPath}}"
