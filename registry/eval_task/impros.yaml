@@ -28,3 +28,36 @@ impros-alpaca-eval-hard:
     post_process: ['extract_audio', 'speech2text']
     evaluator: impros_chatbot_eval_hard
     agg: geval
+
+
+impros-task-s2t:
+  class: audio_evals.base.EvalTaskCfg
+  args:
+    dataset: impros-task-bench
+    prompt: impros-task-prompt
+    model: qwen-audio-chat
+    post_process: ['extract_audio', 'speech2text']
+    evaluator: impros_bench_s2t_eval
+    agg: geval
+
+
+impros-task-s2s:
+  class: audio_evals.base.EvalTaskCfg
+  args:
+    dataset: impros-task-bench-s2s
+    prompt: impros-task-prompt
+    model: qwen-audio-chat
+    post_process: ['extract_audio']
+    evaluator: impros_bench_s2s_eval
+    agg: geval
+
+
+impros-hard-s2s:
+  class: audio_evals.base.EvalTaskCfg
+  args:
+    dataset: impros-hard-bench-s2s
+    prompt: impros-task-prompt
+    model: qwen-audio-chat
+    post_process: ['extract_audio']
+    evaluator: impros_hard_s2s_eval
+    agg: geval

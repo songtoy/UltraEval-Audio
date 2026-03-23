@@ -25,3 +25,26 @@ impros-chat-bench:
     default_task: impros-chat
     f_name: /root/zhoust/Impros/bench/Impros-Bench/impros-test-bench_ultraeval-V2.jsonl
     ref_col: golden_answer 
+
+
+impros-task-bench:
+  class: audio_evals.dataset.dataset.JsonlFile
+  args:
+    default_task: impros-task-s2t
+    f_name: /root/zhoust/Impros/release/continue4tts-persona-s2s_V4_5_gpt-5.1-2025-11-13_full/impros-test-bench_ultraeval.jsonl
+    ref_col: golden_answer 
+
+impros-task-bench-s2s:
+  class: audio_evals.dataset.dataset.JsonlFile
+  args:
+    default_task: impros-task-s2s
+    f_name: /root/zhoust/Impros/release/continue4tts-persona-s2s_V4_5_gpt-5.1-2025-11-13_full/impros-test-bench_ultraeval.jsonl
+    ref_col: golden_answer 
+
+
+impros-hard-bench-s2s:
+  class: audio_evals.dataset.dataset.JsonlFile
+  args:
+    default_task: impros-hard-s2s
+    f_name: /root/zhoust/Impros/bench/Hard-Bench/hard_bench_ultraeval-s2s.jsonl
+    ref_col: golden_answer 

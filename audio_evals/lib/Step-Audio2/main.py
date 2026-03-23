@@ -42,6 +42,10 @@ if __name__ == "__main__":
     
     model = StepAudio2(args.model_path)
     token2wav = Token2wav(os.path.join(args.model_path, "token2wav"))
+
+    if not os.path.exists(args.prompt_wav):
+        CUR_DIR = os.path.dirname(os.path.abspath(__file__))
+        prompt_wav = os.path.join(CUR_DIR, "assets/default_female.wav")
         
     end_time = time.time()
     logger.info(f"Model loading took {end_time - start_time:.2f} seconds")
@@ -98,7 +102,7 @@ if __name__ == "__main__":
             if args.speech and audio_tokens is not None:
                 try:
                     # 解码音频 Tokens 为波形 bytes
-                    audio_wav_bytes = token2wav(audio_tokens, args.prompt_wav)
+                    audio_wav_bytes = token2wav(audio_tokens, prompt_wav)
                     
                     # 写入临时文件
                     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:

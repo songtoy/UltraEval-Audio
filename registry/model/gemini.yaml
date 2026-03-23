@@ -27,3 +27,35 @@ gemini-2.5-pro:
   class: audio_evals.models.google.Gemini
   args:
     model_name: 'gemini-2.5-pro-preview-05-06'
+
+# Using OpenAI API protocol via third-party proxy (OneAPI, etc.)
+# Set GEMINI_API_KEY or OPENAI_API_KEY and GEMINI_API_BASE or OPENAI_API_BASE
+gemini-3.1-pro-openai:
+  class: audio_evals.models.google_api.Gemini
+  args:
+    model_name: 'gemini-3.1-pro-preview'
+
+gemini-3-pro-openai:
+  class: audio_evals.models.google_api.Gemini
+  args:
+    model_name: 'gemini-3-pro-preview-thinking'
+
+gemini-3-flash-openai:
+  class: audio_evals.models.google_api.Gemini
+  args:
+    model_name: 'gemini-3-flash-preview'
+
+gemini-2.5-pro-openai:
+  class: audio_evals.models.google_api.Gemini
+  args:
+    model_name: 'gemini-2.5-pro'
+
+gemini-2.5-flash-openai:
+  class: audio_evals.models.google_api.Gemini
+  args:
+    model_name: 'gemini-2.5-flash-preview-09-2025'
+
+gemini-1.5-pro-openai:
+  class: audio_evals.models.google_api.Gemini
+  args:
+    model_name: 'gemini-1.5-pro'

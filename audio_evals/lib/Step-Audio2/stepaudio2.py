@@ -14,7 +14,7 @@ class StepAudio2Base:
 
     def __init__(self, model_path: str):
         self.llm_tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True, padding_side="right")
-        self.llm = AutoModelForCausalLM.from_pretrained(model_path, trust_remote_code=True, torch_dtype=torch.bfloat16).cuda()
+        self.llm = AutoModelForCausalLM.from_pretrained(model_path, trust_remote_code=True, torch_dtype=torch.bfloat16, attn_implementation="flash_attention_2").cuda()
         self.eos_token_id = self.llm_tokenizer.eos_token_id
 
     def __call__(self, messages: list, **kwargs):

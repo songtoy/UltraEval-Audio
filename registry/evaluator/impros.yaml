@@ -7,3 +7,23 @@ impros_chatbot_eval_hard:
   class: audio_evals.evaluator.alpaca_eval.ImprosChatbotEvaluatorHard
   args:
     model_name: gpt4o-mini
+
+
+
+impros_bench_s2t_eval:
+  class: audio_evals.evaluator.impros_eval.ImprosBenchS2TEvaluator
+  args:
+    model_name: gpt4o-mini
+
+
+impros_bench_s2s_eval:
+  class: audio_evals.evaluator.impros_eval.ImprosBenchS2SEvaluator
+  args:
+    model_name: gemini-3.1-pro-openai
+
+
+
+impros_hard_s2s_eval:
+  class: audio_evals.evaluator.impros_eval.ImprosHardS2SEvaluator
+  args:
+    model_name: gemini-3.1-pro-openai
