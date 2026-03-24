@@ -73,7 +73,7 @@ class ImprosBenchS2SEvaluator(Evaluator):
 
 class ImprosHardS2SEvaluator(Evaluator):
     """直接使用 Speech Language Model 评估音频响应"""
-    
+
     def __init__(self, model_name: str = "gemini-2.5-pro"):
         self.model_name = model_name
 
@@ -99,6 +99,84 @@ class ImprosHardS2SEvaluator(Evaluator):
         d = re.search(r'\[\[(\d+)\]\]', res)
         return {
             "geval": int(d.group(1)),
+            "pred": pred,
+            "ref": label,
+            "pred_caption": res,
+        }
+
+class ImprosMultiDimS2SEvaluator(Evaluator):
+    """使用 Speech Language Model 进行多维音频响应评估"""
+
+    def __init__(self, model_name: str = "gemini-2.5-pro"):
+        self.model_name = model_name
+
+    def _eval(self, pred, label, **kwargs) -> Dict[str, any]:
+        from audio_evals.registry import registry
+
+        model = registry.get_model(self.model_name)
+        prompt = registry.get_prompt("impros-multidim-eval-audio")
+
+        task = kwargs.get("task", None)
+        p = prompt.load(
+            history=kwargs.get("history", ""),
+            persona=kwargs.get("persona", "neutral"),
+            user_transcription=task.get("speech", "") if task else kwargs.get("user_transcription", ""),
+            user_emotion_label=task.get("analysis", "") if task else kwargs.get("user_emotion_label", ""),
+            response_audio=pred
+        )
+
+        res = model.inference(p, temperature=0, max_tokens=2048)
+
+        # 解析各个维度的分数
+        semantic = re.search(r'Semantic Coherence: \[\[(\d+)\]\]', res)
+        affective = re.search(r'Affective Alignment: \[\[(\d+)\]\]', res)
+        prosodic = re.search(r'Prosodic Naturalness: \[\[(\d+)\]\]', res)
+        overall = re.search(r'Overall Rating: \[\[(\d+)\]\]', res)
+
+        return {
+            "semantic_coherence": int(semantic.group(1)) if semantic else None,
+            "affective_alignment": int(affective.group(1)) if affective else None,
+            "prosodic_naturalness": int(prosodic.group(1)) if prosodic else None,
+            "overall_rating": int(overall.group(1)) if overall else None,
+            "pred": pred,
+            "ref": label,
+            "pred_caption": res,
+        }
+
+class ImprosHardMultiDimS2SEvaluator(Evaluator):
+    """使用 Speech Language Model 进行 Hard 任务多维音频响应评估"""
+
+    def __init__(self, model_name: str = "gemini-2.5-pro"):
+        self.model_name = model_name
+
+    def _eval(self, pred, label, **kwargs) -> Dict[str, any]:
+        from audio_evals.registry import registry
+
+        model = registry.get_model(self.model_name)
+        prompt = registry.get_prompt("impros-multidim-eval-audio")
+
+        task = kwargs  # Hard 任务直接用 kwargs
+        p = prompt.load(
+            history=kwargs.get("history", ""),
+            persona=kwargs.get("persona", "neutral"),
+            user_transcription=task.get("content", ""),
+            user_emotion_label="{}. Implicate {}".format(kwargs.get("category", ""), kwargs.get("implication", "")),
+            response_audio=pred
+        )
+
+        res = model.inference(p, temperature=0, max_tokens=2048)
+
+        # 解析各个维度的分数
+        semantic = re.search(r'Semantic Coherence: \[\[(\d+)\]\]', res)
+        affective = re.search(r'Affective Alignment: \[\[(\d+)\]\]', res)
+        prosodic = re.search(r'Prosodic Naturalness: \[\[(\d+)\]\]', res)
+        overall = re.search(r'Overall Rating: \[\[(\d+)\]\]', res)
+
+        return {
+            "semantic_coherence": int(semantic.group(1)) if semantic else None,
+            "affective_alignment": int(affective.group(1)) if affective else None,
+            "prosodic_naturalness": int(prosodic.group(1)) if prosodic else None,
+            "overall_rating": int(overall.group(1)) if overall else None,
             "pred": pred,
             "ref": label,
             "pred_caption": res,

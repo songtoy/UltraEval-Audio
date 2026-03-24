@@ -61,3 +61,24 @@ impros-hard-s2s:
     post_process: ['extract_audio']
     evaluator: impros_hard_s2s_eval
     agg: geval
+
+
+impros-task-s2s-multidim:
+  class: audio_evals.base.EvalTaskCfg
+  args:
+    dataset: impros-task-bench-s2s-multidim
+    prompt: impros-task-prompt
+    model: qwen-audio-chat
+    post_process: ['extract_audio']
+    evaluator: impros_bench_s2s_eval_multi
+    agg: geval-multidim
+
+impros-hard-s2s-multidim:
+  class: audio_evals.base.EvalTaskCfg
+  args:
+    dataset: impros-hard-bench-s2s-multidim
+    prompt: impros-task-prompt
+    model: qwen-audio-chat
+    post_process: ['extract_audio']
+    evaluator: impros_hard_s2s_eval_multi
+    agg: geval-multidim

@@ -72,3 +72,12 @@ geval:
   args:
     need_score_col:
       - geval
+
+geval-multidim:
+  class: audio_evals.agg.base.NaiveMean
+  args:
+    need_score_col:
+      - semantic_coherence
+      - affective_alignment
+      - prosodic_naturalness
+      - overall_rating

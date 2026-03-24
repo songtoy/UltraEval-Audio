@@ -27,3 +27,16 @@ impros_hard_s2s_eval:
   class: audio_evals.evaluator.impros_eval.ImprosHardS2SEvaluator
   args:
     model_name: gemini-3.1-pro-openai
+
+
+impros_bench_s2s_eval_multi:
+  class: audio_evals.evaluator.impros_eval.ImprosMultiDimS2SEvaluator
+  args:
+    model_name: gemini-3.1-pro-openai
+
+
+
+impros_hard_s2s_eval_multi:
+  class: audio_evals.evaluator.impros_eval.ImprosHardMultiDimS2SEvaluator
+  args:
+    model_name: gemini-3.1-pro-openai

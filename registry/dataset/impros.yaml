@@ -48,3 +48,18 @@ impros-hard-bench-s2s:
     default_task: impros-hard-s2s
     f_name: /root/zhoust/Impros/bench/Hard-Bench/hard_bench_ultraeval-s2s.jsonl
     ref_col: golden_answer 
+
+impros-task-bench-s2s-multidim:
+  class: audio_evals.dataset.dataset.JsonlFile
+  args:
+    default_task: impros-task-s2s-multidim
+    f_name: /root/zhoust/Impros/release/continue4tts-persona-s2s_V4_5_gpt-5.1-2025-11-13_full/impros-test-bench_ultraeval.jsonl
+    ref_col: golden_answer 
+
+
+impros-hard-bench-s2s-multidim:
+  class: audio_evals.dataset.dataset.JsonlFile
+  args:
+    default_task: impros-hard-s2s-multidim
+    f_name: /root/zhoust/Impros/bench/Hard-Bench/hard_bench_ultraeval-s2s.jsonl
+    ref_col: golden_answer 

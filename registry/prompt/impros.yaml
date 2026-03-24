@@ -109,3 +109,59 @@ impros-chatbot-eval-audio:
               Please listen to the agent's audio response below and evaluate it:
           - type: audio
             value: "{{response_audio}}"
+
+impros-multidim-eval-audio:
+  class: audio_evals.prompt.base.Prompt
+  args:
+    template:
+      - role: system
+        contents:
+          - type: text
+            value: |
+              [System Instruction]
+              Please act as an expert in speech communication. Evaluate the agent's audio response based on the following three independent dimensions:
+
+              [Scoring rubric]:
+              ## Dimension 1: Semantic Coherence: Does the response logically follow the dialogue history and the user's literal words?
+                5 (Perfect): The response is highly logical, perfectly continues the conversation, and strictly adheres to the provided context and history.
+                3 (Average): The response is relevant but generic (e.g., "I see," "Okay"), missing an opportunity to deepen the dialogue.
+                1 (Failure): Irrelevant, repetitive, or contains factual hallucinations that break the conversation flow.
+              ## Dimension 2: Affective Alignment: Does the response correctly perceive and react to the user's paralinguistic cues (sarcasm, emotion, urgency)?
+                5 (Exceptional): Precisely detects subtle paralinguistic cues (e.g., sarcasm, hidden anxiety). The response's tone and wording show high emotional intelligence (EQ).
+                3 (Neutral): Recognizes the basic emotion but responds with a neutral or slightly mechanical tone, failing to show deep empathy or resonance.
+                1 (Critical Mismatch): Shows "Reverse Empathy" (e.g., responding cheerfully to a sad user) or completely misses obvious sarcasm/urgency.
+              ## Dimension 3: Prosodic Naturalness: Is the agent's voice style appropriate for its assigned Persona, and does it sound human-like?
+                5 (Human-like): The voice is highly expressive, with natural intonation, rhythm, and breathing. It perfectly matches the assigned Persona.
+                3 (Acceptable): The voice is clear and intelligible but sounds somewhat like a standard TTS (robotic or monotonous).
+                1 (Poor Quality): The audio contains significant artifacts, glitches, or a speaking style that is jarringly inappropriate for the Persona.
+              
+              ## Overall Rating (Holistic)
+                5 (Human-level): An ideal interaction where the agent sounds like a perceptive, high-EQ human partner.
+                3 (Functional): The agent completes the task but feels like a machine—correct words, but lacking "soul" or deep emotional connection.
+                1 (Unusable): The interaction is frustrating or misleading due to severe emotional or logical errors.
+
+              Begin your evaluation by providing a VERY brief explanation (1–2 sentences), explicitly mentioning at least one key paralinguistic cue (e.g., emotion, sarcasm, tone) and whether it is matched or mismatched.
+              
+              After providing your explanation, you must rate the response of each dimensions on a scale of 1 to 5 by strictly following this format: "[[rating]]", for example: "Rating: [[3]]".
+
+              [Scoring Format]
+              Explanation: (Limit to 2 sentences)
+              Ratings:
+              - Semantic Coherence: [[score]]
+              - Affective Alignment: [[score]]
+              - Prosodic Naturalness: [[score]]
+              - Overall Rating: [[total_score]]
+      - role: user
+        contents:
+          - type: text
+            value: |
+              [Evaluation Context]
+              - Dialogue History: {{history}}
+              - Agent Persona: {{persona}}
+              - User Audio Transcription: {{user_transcription}}
+              - Ground Truth Intent/Emotion: {{user_emotion_label}}
+
+              [Agent Response Audio]
+              Please listen to the agent's audio response below and evaluate it:
+          - type: audio
+            value: "{{response_audio}}"
