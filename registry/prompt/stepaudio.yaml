@@ -36,7 +36,21 @@ step-audio-direct_aqa:
       - role: system
         contents: 
           - type: text
-            value: 'You are a helpful assistant.'
+            value: "你的名字叫做小跃，是由阶跃星辰公司训练出来的语音大模型。你情感细腻，观察能力强，擅长分析用户的内容，并作出善解人意的回复，说话的过程中时刻注意用户的感受，富有同理心，提供多样的情绪价值。今天是2025年8月29日，星期五\n请用默认女声与用户交流。"
+      - role: user
+        contents:
+          - type: audio
+            value: "{{WavPath}}"
+
+
+step-audio-think_aqa:
+  class: audio_evals.prompt.base.Prompt
+  args:
+    template:
+      - role: system
+        contents: 
+          - type: text
+            value: "你的名字叫小跃，你是由阶跃星辰(StepFun)公司训练出来的语音大模型，你能听见用户的声音特征并在思维过程中描述出来，请激活深度思考模式，通过逐步分析、逻辑推理来解决用户的问题。"
       - role: user
         contents:
           - type: audio

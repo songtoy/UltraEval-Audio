@@ -36,6 +36,24 @@ if __name__ == "__main__":
         default=False,
         help="Whether to generate speech output",
     )
+    parser.add_argument(
+        "--thinking",
+        action="store_true",
+        default=False,
+        help="Whether to thinking process",
+    )
+    parser.add_argument(
+        "--replace_think_token",
+        action="store_true",
+        default=False,
+        help="Whether to replace <think> token with actual thinking content in the final response",
+    )
+    parser.add_argument(
+        "--system_think_prompt",
+        action="store_true",
+        default=False,
+        help="Whether to add extra instructions in system prompt to guide the model to generate more detailed thinking process",
+    )
     args = parser.parse_args()
 
     start_time = time.time()
@@ -53,11 +71,12 @@ if __name__ == "__main__":
 
     # StepAudio2 的采样参数
     sampling_params = {
-        "max_new_tokens": 2048,
+        "max_new_tokens": 1024,
         "temperature": 0.7,
-        "top_p": 0.9,
+        "top_p": 0.95,
         "do_sample": True,
     }
+    system_think_prompt = "你的名字叫小跃，你是由阶跃星辰(StepFun)公司训练出来的语音大模型，你能听见用户的声音特征并在思维过程中描述出来，请激活深度思考模式，通过逐步分析、逻辑推理来解决用户的问题。"
 
     while True:
         try:
@@ -81,11 +100,32 @@ if __name__ == "__main__":
             # 3. 准备消息历史
             messages = x["messages"] if "messages" in x else x
 
-            # 4. 设置语音生成触发器
-            if args.speech:
-                messages.append({"role": "assistant", "content": "<tts_start>","eot": False})
+            print("Parsed messages: ", messages, flush=True)
+
+            if args.system_think_prompt:
+                messages.insert(0, {"role": "system", "content": system_think_prompt})
+
+            think_start = "<think>"
+            think_end = "</think>"
+            if args.replace_think_token:
+                think_start = "<|THINK_START|>"
+                think_end = "<|THINK_END|>"
+
+            if args.thinking:
+                # 在消息历史中插入思考过程占位符
+                messages.append({"role": "assistant", "content": think_start, "eot": False})
+                _, think_content, _ = model(messages, stop_strings=[think_end], **sampling_params)
+                print(think_start + think_content + think_end)
+                # 将思考内容插入消息历史
+                if args.speech:
+                    think_content = think_content.replace('</think', '')
+                    messages[-1]["content"] += think_content + think_end + "\n\n<tts_start>"
             else:
-                messages.append({"role": "assistant", "content": None})
+                # 4. 设置语音生成触发器
+                if args.speech:
+                    messages.append({"role": "assistant", "content": "<tts_start>","eot": False})
+                else:
+                    messages.append({"role": "assistant", "content": None})
 
             #print("messages: ", messages, flush=True)
             # 5. 推理
@@ -98,10 +138,14 @@ if __name__ == "__main__":
             print(">> Output: ", text)
 
             response_payload = {"text": text}
+            if args.thinking:
+                response_payload["think_content"] = think_content 
 
             if args.speech and audio_tokens is not None:
                 try:
                     # 解码音频 Tokens 为波形 bytes
+                    audio = [x for x in audio if x < 6561] # remove audio padding
+
                     audio_wav_bytes = token2wav(audio_tokens, prompt_wav)
                     
                     # 写入临时文件

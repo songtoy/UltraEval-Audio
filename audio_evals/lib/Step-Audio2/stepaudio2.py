@@ -19,6 +19,7 @@ class StepAudio2Base:
 
     def __call__(self, messages: list, **kwargs):
         messages, mels = self.apply_chat_template(messages)
+        print(messages)
 
         # Tokenize prompts
         prompt_ids = []
@@ -58,9 +59,32 @@ class StepAudio2Base:
 
         outputs = self.llm.generate(**generate_inputs, generation_config=generation_config, tokenizer=self.llm_tokenizer)
         output_token_ids = outputs[0, prompt_ids.shape[-1] : -1].tolist()
-        output_text_tokens = [i for i in output_token_ids if i < 151688]
+
+        # Separate interleaving text and audio tokens
+        code_spans = []
+        current_span = []
+        for token_id in output_token_ids:
+            if len(current_span) and (token_id <= 151695) == (current_span[-1] > 151695):
+                code_spans.append(current_span)
+                current_span = [token_id]
+            else:
+                current_span.append(token_id)
+            
+
+        if current_span:
+            code_spans.append(current_span)
+        
+        #print(code_spans)
+        #for i in code_spans:
+        #    assert len(i) < 5
+
+        output_text_tokens = [i for i in output_token_ids if i <= 151695]
         output_audio_tokens = [i - 151696 for i in output_token_ids if i > 151695]
+
+        print(output_text_tokens)
+        print(output_audio_tokens)
         output_text = self.llm_tokenizer.decode(output_text_tokens)
+        print([self.llm_tokenizer.decode(token) for token in output_text_tokens])
         return output_token_ids, output_text, output_audio_tokens
 
     def apply_chat_template(self, messages: list):

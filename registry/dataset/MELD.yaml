@@ -7,6 +7,15 @@ meld-emo:
     ref_col: Emotion
     local_path: /root/zhoust/Impros/bench/MELD/data
 
+meld-choices:
+  class: audio_evals.dataset.huggingface.Huggingface
+  args:
+    name: TwinkStart/MELD
+    split: test
+    default_task: meld_choices
+    ref_col: emotion_choice
+    local_path: /root/zhoust/Impros/bench/MELD/test_reformatted
+
 meld-sentiment:
   class: audio_evals.dataset.huggingface.Huggingface
   args:

@@ -1,3 +1,12 @@
+meld_choices:
+  class: audio_evals.base.EvalTaskCfg
+  args:
+    dataset: meld-choices
+    prompt: meld_choices
+    model: kimiaudio
+    evaluator: prefix-match
+    agg: acc
+
 emotion_analysis:
   class: audio_evals.base.EvalTaskCfg
   args:

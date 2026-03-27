@@ -20,6 +20,9 @@ class StepAudio2(OfflineModel):
         prompt_wav: str = "assets/default_female.wav",
         speech: bool = False,
         sample_params: Dict = None,
+        thinking: bool = False,
+        replace_think_token: bool = False,
+        system_think_prompt: bool = False,
         *args,
         **kwargs,
     ):
@@ -32,6 +35,12 @@ class StepAudio2(OfflineModel):
         }
         if speech:
             self.command_args["speech"] = ""
+        if thinking:
+            self.command_args["thinking"] = ""
+        if replace_think_token:
+            self.command_args["replace_think_token"] = ""
+        if system_think_prompt:
+            self.command_args["system_think_prompt"] = ""
 
         super().__init__(is_chat=True, sample_params=sample_params)
 

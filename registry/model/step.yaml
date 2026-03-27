@@ -24,3 +24,85 @@ stepaudio2-mini-speech:
     requirements_path: audio_evals/lib/Step-Audio2/requirements.txt
     model_path: /root/zhoust/pretrained_models/stepfun-ai/Step-Audio-2-mini
     speech: true
+
+stepaudio2-mini-think:
+  class: audio_evals.models.stepfun.StepAudio2
+  args:
+    env_path: envs/step-audio2
+    requirements_path: audio_evals/lib/Step-Audio2/requirements.txt
+    model_path: /root/zhoust/pretrained_models/stepfun-ai/Step-Audio-2-mini-Think
+    thinking: true
+    system_think_prompt: true
+
+stepaudio2-mini-think-speech:
+  class: audio_evals.models.stepfun.StepAudio2
+  args:
+    env_path: envs/step-audio2
+    requirements_path: audio_evals/lib/Step-Audio2/requirements.txt
+    model_path: /root/zhoust/pretrained_models/stepfun-ai/Step-Audio-2-mini-Think
+    thinking: true
+    system_think_prompt: true
+    speech: true
+
+stepaudio2_sft_5_epoch_lr_1e-6_bs_64:
+  class: audio_evals.models.stepfun.StepAudio2
+  args:
+    env_path: envs/step-audio2
+    requirements_path: audio_evals/lib/Step-Audio2/requirements.txt
+    model_path: /root/zhoust/Step-Audio2/output/stepaudio2_sft_5_epoch_lr_1e-6_bs_64
+
+stepaudio2_sft_5_epoch_lr_1e-6_bs_64-speech:
+  class: audio_evals.models.stepfun.StepAudio2
+  args:
+    env_path: envs/step-audio2
+    requirements_path: audio_evals/lib/Step-Audio2/requirements.txt
+    model_path: /root/zhoust/Step-Audio2/output/stepaudio2_sft_5_epoch_lr_1e-6_bs_64
+    speech: true
+
+stepaudio2_sft_5_epoch_lr_1e-6_bs_64_drop_qwen:
+  class: audio_evals.models.stepfun.StepAudio2
+  args:
+    env_path: envs/step-audio2
+    requirements_path: audio_evals/lib/Step-Audio2/requirements.txt
+    model_path: /root/zhoust/Step-Audio2/output/stepaudio2_sft_5_epoch_lr_1e-6_bs_64_drop_qwen
+
+stepaudio2_sft_5_epoch_lr_1e-6_bs_64_drop_qwen-speech:
+  class: audio_evals.models.stepfun.StepAudio2
+  args:
+    env_path: envs/step-audio2
+    requirements_path: audio_evals/lib/Step-Audio2/requirements.txt
+    model_path: /root/zhoust/Step-Audio2/output/stepaudio2_sft_5_epoch_lr_1e-6_bs_64_drop_qwen
+    speech: true
+
+stepaudio2_sft_5_epoch_lr_1e-6_bs_64_cot:
+  class: audio_evals.models.stepfun.StepAudio2
+  args:
+    env_path: envs/step-audio2
+    requirements_path: audio_evals/lib/Step-Audio2/requirements.txt
+    model_path: /root/zhoust/Step-Audio2/output/stepaudio2_sft_5_epoch_lr_1e-6_bs_64_cot
+
+stepaudio2_sft_5_epoch_lr_1e-6_bs_64_cot-speech:
+  class: audio_evals.models.stepfun.StepAudio2
+  args:
+    env_path: envs/step-audio2
+    requirements_path: audio_evals/lib/Step-Audio2/requirements.txt
+    model_path: /root/zhoust/Step-Audio2/output/stepaudio2_sft_5_epoch_lr_1e-6_bs_64_cot
+    thinking: true
+    speech: true
+    replace_think_token: true
+
+stepaudio2_sft_5_epoch_lr_1e-6_bs_64_drop_cot_qwen_bugfix:
+  class: audio_evals.models.stepfun.StepAudio2
+  args:
+    env_path: envs/step-audio2
+    requirements_path: audio_evals/lib/Step-Audio2/requirements.txt
+    model_path: /root/zhoust/Step-Audio2/output/stepaudio2_sft_5_epoch_lr_1e-6_bs_64_drop_cot_qwen_bugfix
+
+stepaudio2_sft_5_epoch_lr_1e-6_bs_64_drop_cot_qwen_bugfix-speech:
+  class: audio_evals.models.stepfun.StepAudio2
+  args:
+    env_path: envs/step-audio2
+    requirements_path: audio_evals/lib/Step-Audio2/requirements.txt
+    model_path: /root/zhoust/Step-Audio2/output/stepaudio2_sft_5_epoch_lr_1e-6_bs_64_drop_cot_qwen_bugfix
+    thinking: true
+    speech: true

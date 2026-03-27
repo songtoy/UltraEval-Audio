@@ -161,9 +161,8 @@ class Gemini(APIModel):
             if content_type == "text":
                 message_content.append({"type": "text", "text": value})
             elif content_type == "audio":
-                print("Get value:", value)
+                print("Get audio data:", value)
                 audio_data, audio_format = self._encode_audio(value)
-                print("audio_data")
                 message_content.append(
                     {
                         "type": "input_audio",

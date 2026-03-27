@@ -6,17 +6,55 @@ import os
 # 请在这里配置你的模型名称和对应的 jsonl 文件路径
 # 格式: "模型显示名称": "文件路径"
 MODEL_FILES = {
+    # Hard-Bench 
     #"Kimi-Audio": "/root/zhoust/UltraEval-Audio/res/kimiaudio-speech/impros-hard-bench/2026-01-15_18-02-27.jsonl",
     #"Ours(ins,1e-5)": "/root/zhoust/UltraEval-Audio/res/kimia_sft_0112_persona_5_epoch_eval_lr_1e-5_cosine_eos_both-speech/impros-hard-bench/2026-01-15_18-09-25.jsonl", 
     #"Ours(ins,1e-6)": "/root/zhoust/UltraEval-Audio/res/kimia_sft_0112_persona_5_epoch_eval_lr_1e-6_cosine_eos_both-speech/impros-hard-bench/2026-01-15_19-10-29.jsonl",
     #"Ours(ins,5e-6)": "/root/zhoust/UltraEval-Audio/res/kimia_sft_0112_persona_5_epoch_eval_lr_5e-6_cosine_eos_both-speech/impros-hard-bench/2026-01-15_19-45-09.jsonl",
     #"Ours(base,1e-5)": "/root/zhoust/UltraEval-Audio/res/kimia_base_sft_0112_persona_5_epoch_eval_lr_1e-5_cosine_eos_both-speech/impros-hard-bench/2026-01-18_00-42-57.jsonl",
-    # 你可以继续添加更多模型...
-    "Kimi-Audio": "/root/zhoust/UltraEval-Audio/res/kimiaudio-speech/impros-test-bench/2026-01-15_17-51-28.jsonl",
+    #"Ours(sys_context, nothinking)": "/root/zhoust/UltraEval-Audio/res/kimia_sft_0112_persona_5_epoch_eval_lr_1e-6_cosine_eos_both_with_sys_context-speech/impros-hard-bench/2026-01-30_18-44-52.jsonl",
+    #"Ours(sys_context, thinking)": "/root/zhoust/UltraEval-Audio/res/kimia_sft_0112_persona_5_epoch_eval_lr_1e-6_cosine_eos_both_with_sys_context_cot-speech/impros-hard-bench/2026-02-19_13-57-08.jsonl",
+    #"Ours(sys_context, thinking, qwen)": "/root/zhoust/UltraEval-Audio/res/kimia_sft_0112_persona_5_epoch_eval_lr_1e-6_cosine_eos_both_with_sys_context_cot_qwen-speech/impros-hard-bench/2026-03-05_11-38-15.jsonl",
+
+    # Test-Bench V1
+    #"Kimi-Audio": "/root/zhoust/UltraEval-Audio/res/kimiaudio-speech/impros-test-bench/2026-01-15_17-51-28.jsonl",
     #"Ours(ins,1e-5)": "/root/zhoust/UltraEval-Audio/res/kimia_sft_0112_persona_5_epoch_eval_lr_1e-5_cosine_eos_both-speech/impros-test-bench/2026-01-15_18-17-03.jsonl", 
-    "Ours(ins,1e-6)": "/root/zhoust/UltraEval-Audio/res/kimia_sft_0112_persona_5_epoch_eval_lr_1e-6_cosine_eos_both-speech/impros-test-bench/2026-01-15_19-17-47.jsonl",
+    #"Ours(ins,1e-6)": "/root/zhoust/UltraEval-Audio/res/kimia_sft_0112_persona_5_epoch_eval_lr_1e-6_cosine_eos_both-speech/impros-test-bench/2026-01-15_19-17-47.jsonl",
     #"Ours(ins,5e-6)": "/root/zhoust/UltraEval-Audio/res/kimia_sft_0112_persona_5_epoch_eval_lr_5e-6_cosine_eos_both-speech/impros-test-bench/2026-01-15_19-52-49.jsonl",
     #"Ours(base,1e-5)": "/root/zhoust/UltraEval-Audio/res/kimia_base_sft_0112_persona_5_epoch_eval_lr_1e-5_cosine_eos_both-speech/impros-test-bench/2026-01-18_00-50-41.jsonl",
+
+    # Test-Bench V2
+    #"Kimi-Audio": "/root/zhoust/UltraEval-Audio/res/kimiaudio-speech/impros-test-bench-V2/2026-01-23_13-44-38.jsonl",
+    #"Ours(ins,1e-6)": "/root/zhoust/UltraEval-Audio/res/kimia_sft_0112_persona_5_epoch_eval_lr_1e-6_cosine_eos_both-speech/impros-test-bench-V2/2026-01-23_16-33-05.jsonl",
+    #"Ours(sys_context, nothinking)": "/root/zhoust/UltraEval-Audio/res/kimia_sft_0112_persona_5_epoch_eval_lr_1e-6_cosine_eos_both_with_sys_context-speech/impros-test-bench-V2/2026-01-30_18-44-52.jsonl",
+    #"Ours(sys_context, thinking)": "/root/zhoust/UltraEval-Audio/res/kimia_sft_0112_persona_5_epoch_eval_lr_1e-6_cosine_eos_both_with_sys_context_cot-speech/impros-test-bench-V2/2026-03-02_21-16-07.jsonl",
+    #"Ours(sys_context, thinking, qwen)": "/root/zhoust/UltraEval-Audio/res/kimia_sft_0112_persona_5_epoch_eval_lr_1e-6_cosine_eos_both_with_sys_context_cot_qwen-speech/impros-test-bench-V2/2026-03-05_11-51-25.jsonl",
+
+    # Alpaca-Eval
+    #"Kimi-Audio": "/root/zhoust/UltraEval-Audio/res/kimiaudio-speech/speech-chatbot-alpaca-eval/2026-01-05_00-07-06.jsonl",
+    #"Ours(ins,1e-6)": "/root/zhoust/UltraEval-Audio/res/kimia_sft_0112_persona_5_epoch_eval_lr_1e-6_cosine_eos_both-speech/speech-chatbot-alpaca-eval/2026-01-15_15-31-16.jsonl",
+
+
+
+    # ImPros-Bench
+    "ImPros-Bench-Std" : {
+        "Qwen2.5-omni": "/root/zhoust/UltraEval-Audio/res/qwen2.5-omni-speech/impros-task-bench-s2s-multidim/2026-03-24_01-33-13.jsonl",
+        "Kimi-Audio": "/root/zhoust/UltraEval-Audio/res/kimiaudio-speech/impros-task-bench-s2s-multidim/2026-03-24_01-33-13.jsonl",
+        "Kimi-Audio-ImProser-D": "/root/zhoust/Impros/bench/UltraEval-Audio/res/kimia_sft_0112_persona_5_epoch_eval_lr_1e-6_cosine_eos_both_with_sys_context_qwen-speech/impros-task-bench-s2s-multidim/2026-03-24_01-33-13.jsonl",
+        "Kimi-Audio-ImProser-C": "/root/zhoust/UltraEval-Audio/res/kimia_sft_0112_persona_5_epoch_eval_lr_1e-6_cosine_eos_both_with_sys_context_cot_qwen-speech/impros-task-bench-s2s-multidim/2026-03-24_01-33-13.jsonl",
+        "Step-Audio2": "/root/zhoust/UltraEval-Audio/res/stepaudio2-mini-speech/impros-task-bench-s2s-multidim/2026-03-25_12-14-37.jsonl",
+        "Step-Audio2-ImProser-D": "/root/zhoust/UltraEval-Audio/res/stepaudio2_sft_5_epoch_lr_1e-6_bs_64_drop_qwen-speech/impros-task-bench-s2s-multidim/2026-03-25_18-20-14.jsonl",
+        "Step-Audio2-ImProser-C": "/root/zhoust/UltraEval-Audio/res/stepaudio2_sft_5_epoch_lr_1e-6_bs_64_drop_cot_qwen_bugfix-speech/impros-task-bench-s2s-multidim/2026-03-25_18-20-14.jsonl",
+    },
+    "ImPros-Bench-Hard" : {
+        "Qwen2.5-omni": "/root/zhoust/UltraEval-Audio/res/qwen2.5-omni-speech/impros-hard-bench-s2s-multidim/2026-03-24_03-48-31.jsonl",
+        "Kimi-Audio": "/root/zhoust/UltraEval-Audio/res/kimiaudio-speech/impros-hard-bench-s2s-multidim/2026-03-25_04-07-42.jsonl",
+        "Kimi-Audio-ImProser-D": "/root/zhoust/Impros/bench/UltraEval-Audio/res/kimia_sft_0112_persona_5_epoch_eval_lr_1e-6_cosine_eos_both_with_sys_context_qwen-speech/impros-hard-bench-s2s-multidim/2026-03-25_04-07-42.jsonl",
+        "Kimi-Audio-ImProser-C": "/root/zhoust/Impros/bench/UltraEval-Audio/res/kimia_sft_0112_persona_5_epoch_eval_lr_1e-6_cosine_eos_both_with_sys_context_cot_qwen-speech/impros-hard-bench-s2s-multidim/2026-03-24_05-30-41.jsonl",
+        "Step-Audio2": "/root/zhoust/UltraEval-Audio/res/stepaudio2-mini-speech/impros-hard-bench-s2s-multidim/2026-03-25_04-07-42.jsonl",
+        "Step-Audio2-ImProser-D": "/root/zhoust/UltraEval-Audio/res/stepaudio2_sft_5_epoch_lr_1e-6_bs_64_drop_qwen-speech/impros-hard-bench-s2s-multidim/2026-03-25_18-20-14.jsonl",
+        "Step-Audio2-ImProser-C": "/root/zhoust/UltraEval-Audio/res/stepaudio2_sft_5_epoch_lr_1e-6_bs_64_drop_cot_qwen_bugfix-speech/impros-hard-bench-s2s-multidim/2026-03-25_18-20-14.jsonl",
+    }
 }
 # =========================================
 
@@ -211,4 +249,4 @@ if __name__ == "__main__":
         print("Error: No data loaded. Please check your JSONL paths.")
     else:
         print(f"Loaded {total_samples} samples with models: {model_names}")
-        demo.launch(server_name="0.0.0.0", server_port=7860,allowed_paths=["/mnt/zhoust/Impros", "/root/zhoust/Impros"] )
+        demo.launch(server_name="0.0.0.0", server_port=7861, allowed_paths=["/mnt/zhoust/Impros", "/root/zhoust/Impros"] )

@@ -1,3 +1,14 @@
+meld_choices:
+  class: audio_evals.prompt.base.Prompt
+  args:
+    template:
+    - role: user
+      contents:
+      - type: audio
+        value: '{{WavPath}}'
+      - type: text
+        value: 'Identify the predominant emotion in this speech.\nOptions:\n(A) neutral\n(B) joy\n(C) sadness\n(D) anger\n(E) surprise\n(F) fear\n(G) disgust\n.Answer with the option''s letter from the given choices directly and only give the best option.'
+
 emo_analysis:
   class: audio_evals.prompt.base.Prompt
   args:
